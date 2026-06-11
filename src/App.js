@@ -341,6 +341,7 @@ function PartnerCaseModal(props){
   var [eName,setEName]=useState("");
   var [eAmt,setEAmt]=useState("");
   var [eTo,setETo]=useState("");
+  var [shareMode,setShareMode]=useState("equal");
 
   var clientAmount=Number(f.clientAmount||0);
   var totalInvested=f.partners.reduce(function(s,p){return s+Number(p.amount||0);},0);
@@ -455,10 +456,24 @@ function PartnerCaseModal(props){
       {f.partners.length>0&&(
         <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:12,padding:14,marginBottom:14}}>
           <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:10}}>📊 Per Partner Breakdown</div>
+          {/* Share mode toggle */}
+          <div style={{display:"flex",gap:0,marginBottom:12,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden",width:"fit-content"}}>
+            <button onClick={function(){setShareMode("proportional");}} style={{padding:"7px 14px",border:"none",background:shareMode==="proportional"?C.accent:"transparent",color:shareMode==="proportional"?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+              Investment % se Share
+            </button>
+            <button onClick={function(){setShareMode("equal");}} style={{padding:"7px 14px",border:"none",background:shareMode==="equal"?C.accent:"transparent",color:shareMode==="equal"?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+              Investment Wapas + Equal Profit
+            </button>
+          </div>
+          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:11,color:C.gold}}>
+            {shareMode==="proportional"
+              ?"💡 Proportional: Jisne jitna invest kiya, utna % profit milega"
+              :"💡 Equal: Pehle investment wapas, phir bacha hua profit equal parts mein"}
+          </div>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
             <thead>
               <tr style={{background:C.accentSoft}}>
-                {["Partner","Invested","Share %","Profit Share","Net Return (Invested + Profit)"].map(function(h){
+                {["Partner","Invested","Investment Wapas","Profit Share","Total Milega"].map(function(h){
                   return <th key={h} style={{padding:"8px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;
                 })}
               </tr>
@@ -466,31 +481,44 @@ function PartnerCaseModal(props){
             <tbody>
               {f.partners.map(function(p,i){
                 var invested=Number(p.amount||0);
-                var share=totalInvested>0?((invested/totalInvested)*100):0;
-                var profitShare=totalInvested>0?Math.round((invested/totalInvested)*netProfit):Math.round(netProfit/f.partners.length);
-                var netReturn=invested+profitShare;
+                var profitShare, investReturn;
+
+                if(shareMode==="equal"){
+                  // Investment fully returned + equal profit split
+                  investReturn=invested;
+                  profitShare=f.partners.length>0?Math.round(netProfit/f.partners.length):0;
+                } else {
+                  // Proportional based on investment %
+                  investReturn=invested;
+                  profitShare=totalInvested>0?Math.round((invested/totalInvested)*netProfit):Math.round(netProfit/f.partners.length);
+                }
+
+                var total=investReturn+profitShare;
                 return(
                   <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#f0fdf4"}}>
                     <td style={{padding:"9px 10px",fontWeight:800,fontSize:13}}>{p.name}</td>
                     <td style={{padding:"9px 10px",color:C.accent,fontWeight:700}}>{pkr(invested)}</td>
                     <td style={{padding:"9px 10px"}}>
-                      <span style={{background:C.accentSoft,color:C.accent,padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700}}>{share.toFixed(1)}%</span>
+                      <span style={{background:"#dcfce7",color:C.accent,padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700}}>✓ {pkr(investReturn)}</span>
                     </td>
-                    <td style={{padding:"9px 10px",color:profitShare>=0?C.gold:C.red,fontWeight:700,fontSize:13}}>{pkr(profitShare)}</td>
-                    <td style={{padding:"9px 10px",fontWeight:900,fontSize:13,color:netReturn>=invested?C.accent:C.red}}>
-                      {pkr(netReturn)}
-                      <span style={{fontSize:9,color:C.muted,marginLeft:4}}>({netReturn>=invested?"+":" "}{pkr(netReturn-invested)})</span>
+                    <td style={{padding:"9px 10px",color:profitShare>=0?C.gold:C.red,fontWeight:700,fontSize:13}}>
+                      {shareMode==="equal"
+                        ?<span style={{fontSize:10,color:C.muted}}>÷{f.partners.length} = </span>
+                        :<span style={{fontSize:10,color:C.muted}}>{totalInvested>0?Math.round((invested/totalInvested)*100):0}% = </span>
+                      }
+                      {pkr(profitShare)}
+                    </td>
+                    <td style={{padding:"9px 10px",fontWeight:900,fontSize:14,color:total>=invested?C.accent:C.red}}>
+                      {pkr(total)}
+                      <div style={{fontSize:9,color:profitShare>=0?C.gold:C.red,marginTop:2}}>
+                        {profitShare>=0?"+ ":"- "}{pkr(Math.abs(profitShare))} profit
+                      </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          {totalInvested===0&&f.partners.length>0&&(
-            <div style={{marginTop:8,padding:"6px 10px",background:"#fffbeb",borderRadius:7,fontSize:11,color:C.gold}}>
-              ⚠ Investment amounts 0 hain — barabar divide kar raha hoon
-            </div>
-          )}
         </div>
       )}
 
@@ -550,6 +578,12 @@ function PartnerCasesTab(props){
 
     {viewCase&&(
       <Modal title={"Case: "+viewCase.title} onClose={function(){setViewCase(null);}} wide={true}>
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+          <button onClick={function(){setEditCase(viewCase);setShowForm(true);setViewCase(null);}}
+            style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:8,padding:"7px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
+            ✏️ Edit This Case
+          </button>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
           <div style={{background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:10,padding:14}}>
             <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:8}}>Partners / Investors</div>
@@ -976,7 +1010,10 @@ export default function App(){
   var [customers,setCR]=useState(function(){return ld("olympia_customers",SC);});
   var [expenses,setER] =useState(function(){return ld("olympia_expenses",SE);});
   var [packages,setPR] =useState(function(){return ld("olympia_packages",SP);});
-  var [cases,setCasesR]=useState(function(){return ld("olympia_cases",SPARTNER);});
+  var [cases,setCasesR]=useState(function(){
+    var d=ld("olympia_cases",SPARTNER);
+    return Array.isArray(d)?d:[];
+  });
   var [personal,setPersonalR]=useState(function(){return ld("olympia_personal",[]);});
   var [fbStatus,setFbStatus]=useState("connecting");
   var [toast,setToast]=useState(false);
@@ -1005,7 +1042,6 @@ export default function App(){
             kv.setter(fbData);
             sv(kv.lk, fbData);
           } else {
-            // Firebase empty — upload local data to Firebase
             var localData = kv.getter();
             if(Array.isArray(localData) && localData.length>0){
               fbSave(kv.fb, localData);
@@ -1019,7 +1055,10 @@ export default function App(){
   function setC(d){setCR(d);sv("olympia_customers",d);fbSave("olympia_customers",d);showToast();}
   function setE(d){setER(d);sv("olympia_expenses",d);fbSave("olympia_expenses",d);showToast();}
   function setP(d){setPR(d);sv("olympia_packages",d);fbSave("olympia_packages",d);showToast();}
-  function setCases(d){setCasesR(d);sv("olympia_cases",d);fbSave("olympia_cases",d);showToast();}
+  function setCases(d){
+    var arr=Array.isArray(d)?d:[];
+    setCasesR(arr);sv("olympia_cases",arr);fbSave("olympia_cases",arr);showToast();
+  }
   function setPersonal(d){
     setPersonalR(d);
     sv("olympia_personal",d);
@@ -1122,7 +1161,7 @@ export default function App(){
               <Stat icon="📈" label="Bk Profit" value={pkr(tProfit)} color={C.gold}/>
               <Stat icon="📤" label="Expenses"  value={pkr(tExp)}    color={C.red}/>
               <Stat icon="🏦" label="Net"        value={pkr(net)}     color={net>=0?C.gold:C.red}/>
-              <Stat icon="⏳" label="Pending"   value={pend+" bk"}   color="#d97706"/>
+              <Stat icon="⏳" label="Pending"   value={pend+" Bookings"}   color="#d97706"/>
               <Stat icon="👥" label="Customers" value={customers.length} color={C.accent}/>
             </div>
             <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
