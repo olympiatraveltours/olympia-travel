@@ -1,9 +1,12 @@
-FROM node:18-alpine
+FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
-RUN npm install -g serve@13
-EXPOSE 3000
-CMD ["sh", "-c", "serve -s build -l tcp://0.0.0.0:${PORT:-3000}"]
+
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
