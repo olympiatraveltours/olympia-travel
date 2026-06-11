@@ -29,39 +29,38 @@ const FIREBASE_CONFIG = {
 };
 
 // ─── FIREBASE REALTIME SYNC ──────────────────────────────────
+// Firebase loaded via CDN script tag in index.html
 var _db=null, _set=null, _ref=null, _onVal=null, _ready=false;
 var _saveQueue=[];
 
 function initFirebase(config, onReady){
-  Promise.all([
-    import("https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"),
-    import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js")
-  ]).then(function(mods){
-    var app = mods[0].initializeApp(config);
-    _db    = mods[1].getDatabase(app);
-    _set   = mods[1].set;
-    _ref   = mods[1].ref;
-    _onVal = mods[1].onValue;
+  try {
+    var firebase = window.firebase;
+    if(!firebase) { console.log("Firebase SDK not loaded"); return; }
+    var app = firebase.initializeApp(config);
+    var db = firebase.database(app);
+    _db = db;
+    _set = function(ref, data){ ref.set(data); };
+    _ref = function(db, path){ return db.ref(path); };
+    _onVal = function(ref, cb){ ref.on("value", function(snap){ cb(snap); }); };
     _ready = true;
-    // flush any queued saves
-    _saveQueue.forEach(function(q){ _set(_ref(_db,q.p),q.d); });
+    _saveQueue.forEach(function(q){ _ref(_db,q.p).set(q.d); });
     _saveQueue=[];
     console.log("Firebase ready!");
     if(onReady) onReady();
-  }).catch(function(e){ console.log("Firebase init error:",e); });
+  } catch(e) { console.log("Firebase init error:",e); }
 }
 
 function fbSave(path,data){
-  if(!_ready){ _saveQueue.push({p:path,d:data}); return; }
-  try{ _set(_ref(_db,path), data); }catch(e){}
+  if(!_ready||!_db){ _saveQueue.push({p:path,d:data}); return; }
+  try{ _ref(_db,path).set(data); }catch(e){}
 }
 
 function fbListen(path,cb){
   if(!_ready||!_db) return;
   try{
-    _onVal(_ref(_db,path),function(snap){
+    _ref(_db,path).on("value",function(snap){
       var v=snap.val();
-      // Accept any array, even empty (to sync deletions)
       if(v!==null && v!==undefined){
         if(Array.isArray(v)) cb(v);
         else if(typeof v==="object") cb(Object.values(v));
