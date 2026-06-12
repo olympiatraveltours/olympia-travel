@@ -335,31 +335,36 @@ function CustomerHistoryModal(props){
 // ─── PARTNER CASE MODAL ──────────────────────────────────────
 function PartnerCaseModal(props){
   var emptyCase={id:"",title:"",status:"Active",date:"",clientAmount:"",partners:[],expenses:[],notes:""};
-  var [f,setF]=useState(props.caseItem?Object.assign({},props.caseItem):emptyCase);
+  var rawCase=props.caseItem?Object.assign({},props.caseItem):emptyCase;
+  if(!Array.isArray(rawCase.partners)) rawCase.partners=[];
+  if(!Array.isArray(rawCase.expenses)) rawCase.expenses=[];
+  var [f,setF]=useState(rawCase);
   var [pName,setPName]=useState("");
   var [pAmt,setPAmt]=useState("");
   var [eName,setEName]=useState("");
   var [eAmt,setEAmt]=useState("");
   var [eTo,setETo]=useState("");
-  var [shareMode,setShareMode]=useState("equal");
+
 
   var clientAmount=Number(f.clientAmount||0);
-  var totalInvested=f.partners.reduce(function(s,p){return s+Number(p.amount||0);},0);
-  var totalExp=f.expenses.reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var fPartners=Array.isArray(f.partners)?f.partners:[];
+  var fExpenses=Array.isArray(f.expenses)?f.expenses:[];
+  var totalInvested=fPartners.reduce(function(s,p){return s+Number(p.amount||0);},0);
+  var totalExp=fExpenses.reduce(function(s,e){return s+Number(e.amount||0);},0);
   var netProfit=clientAmount-totalExp;
 
   function addPartner(){
     if(!pName)return;
-    setF(Object.assign({},f,{partners:f.partners.concat([{name:pName,amount:Number(pAmt||0)}])}));
+    setF(Object.assign({},f,{partners:fPartners.concat([{name:pName,amount:Number(pAmt||0)}])}));
     setPName("");setPAmt("");
   }
   function addExpense(){
     if(!eName||!eAmt)return;
-    setF(Object.assign({},f,{expenses:f.expenses.concat([{desc:eName,amount:Number(eAmt),to:eTo}])}));
+    setF(Object.assign({},f,{expenses:fExpenses.concat([{desc:eName,amount:Number(eAmt),to:eTo}])}));
     setEName("");setEAmt("");setETo("");
   }
-  function removeP(i){setF(Object.assign({},f,{partners:f.partners.filter(function(_,j){return j!==i;})}));}
-  function removeE(i){setF(Object.assign({},f,{expenses:f.expenses.filter(function(_,j){return j!==i;})}));}
+  function removeP(i){setF(Object.assign({},f,{partners:fPartners.filter(function(_,j){return j!==i;})}));}
+  function removeE(i){setF(Object.assign({},f,{expenses:fExpenses.filter(function(_,j){return j!==i;})}));}
 
   return(
     <Modal title={props.isNew?"New Partner Case":"Edit Partner Case"} onClose={props.onClose} wide={true}>
@@ -396,7 +401,7 @@ function PartnerCaseModal(props){
               style={{flex:1,background:C.white,border:"1.5px solid "+C.border,borderRadius:7,padding:"6px 9px",fontSize:12,outline:"none",minWidth:70}}/>
             <button onClick={addPartner} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"6px 10px",cursor:"pointer",fontWeight:700,fontSize:13}}>+</button>
           </div>
-          {f.partners.map(function(p,i){return(
+          {fPartners.map(function(p,i){return(
             <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+C.border,fontSize:12}}>
               <span style={{fontWeight:600}}>{p.name}</span>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -422,7 +427,7 @@ function PartnerCaseModal(props){
               style={{flex:1,background:C.white,border:"1.5px solid #fde68a",borderRadius:7,padding:"6px 9px",fontSize:12,outline:"none",minWidth:60}}/>
             <button onClick={addExpense} style={{background:C.gold,color:"#fff",border:"none",borderRadius:7,padding:"6px 10px",cursor:"pointer",fontWeight:700,fontSize:13}}>+</button>
           </div>
-          {f.expenses.map(function(e,i){return(
+          {fExpenses.map(function(e,i){return(
             <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid #fde68a",fontSize:12}}>
               <div><span style={{fontWeight:600}}>{e.desc}</span>{e.to&&<span style={{color:C.muted,fontSize:10}}> → {e.to}</span>}</div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -442,8 +447,9 @@ function PartnerCaseModal(props){
         {[
           ["Client Amount",pkr(clientAmount),C.accent,C.accentSoft,C.border],
           ["Total Expenses",pkr(totalExp),C.red,"#fef9f0","#fde68a"],
-          ["Net Profit",pkr(netProfit),netProfit>=0?C.gold:C.red,netProfit>=0?"#fffbeb":C.redBg,netProfit>=0?"#fde68a":"#fecaca"],
-          ["Per Partner (equal)",pkr(f.partners.length>0?Math.round(netProfit/f.partners.length):0),netProfit>=0?C.accent:C.red,C.white,C.border]
+          ["Total Investments",pkr(totalInvested),C.gold,"#fffbeb","#fde68a"],
+          ["Net Profit (to divide)",pkr(clientAmount-totalExp-totalInvested),C.accent,C.white,C.border],
+          ["Per Partner Share",pkr(fPartners.length>0?Math.round((clientAmount-totalExp-totalInvested)/fPartners.length):0),"#7c3aed","#f5f3ff","#ddd6fe"]
         ].map(function(s){return(
           <div key={s[0]} style={{flex:1,minWidth:110,background:s[3],border:"1.5px solid "+s[4],borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
             <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>{s[0]}</div>
@@ -456,68 +462,80 @@ function PartnerCaseModal(props){
       {f.partners.length>0&&(
         <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:12,padding:14,marginBottom:14}}>
           <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:10}}>📊 Per Partner Breakdown</div>
-          {/* Share mode toggle */}
-          <div style={{display:"flex",gap:0,marginBottom:12,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden",width:"fit-content"}}>
-            <button onClick={function(){setShareMode("proportional");}} style={{padding:"7px 14px",border:"none",background:shareMode==="proportional"?C.accent:"transparent",color:shareMode==="proportional"?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
-              Investment % se Share
-            </button>
-            <button onClick={function(){setShareMode("equal");}} style={{padding:"7px 14px",border:"none",background:shareMode==="equal"?C.accent:"transparent",color:shareMode==="equal"?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
-              Investment Wapas + Equal Profit
-            </button>
+          {/* Formula Box */}
+          <div style={{background:"#f0fdf4",border:"2px solid "+C.border,borderRadius:10,padding:"10px 14px",marginBottom:12}}>
+            <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:8}}>📊 Hisaab:</div>
+            <div style={{fontSize:12,display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+              <span style={{background:"#dcfce7",color:C.accent,padding:"3px 9px",borderRadius:7,fontWeight:700}}>{pkr(clientAmount)} Client</span>
+              <span style={{color:C.red,fontWeight:700}}>− {pkr(totalExp)} Expenses</span>
+              <span style={{color:C.red,fontWeight:700}}>− {pkr(totalInvested)} Investments</span>
+              <span style={{fontWeight:900,color:C.accent,fontSize:14}}>= {pkr(clientAmount-totalExp-totalInvested)} Divide Hoga</span>
+            </div>
+            <div style={{color:C.muted,fontSize:11,marginTop:5}}>
+              {pkr(clientAmount-totalExp-totalInvested)} ÷ {fPartners.length} partners = <b style={{color:C.accent}}>{pkr(fPartners.length>0?Math.round((clientAmount-totalExp-totalInvested)/fPartners.length):0)}</b> har partner ko
+            </div>
           </div>
-          <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:11,color:C.gold}}>
-            {shareMode==="proportional"
-              ?"💡 Proportional: Jisne jitna invest kiya, utna % profit milega"
-              :"💡 Equal: Pehle investment wapas, phir bacha hua profit equal parts mein"}
-          </div>
-          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:10}}>
             <thead>
               <tr style={{background:C.accentSoft}}>
-                {["Partner","Invested","Investment Wapas","Profit Share","Total Milega"].map(function(h){
-                  return <th key={h} style={{padding:"8px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;
+                {["Partner","Investment Lagaya","Investment Wapas","Profit Share","TOTAL MILEGA"].map(function(h){
+                  return <th key={h} style={{padding:"9px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase",borderBottom:"2px solid "+C.border}}>{h}</th>;
                 })}
               </tr>
             </thead>
             <tbody>
-              {f.partners.map(function(p,i){
+              {fPartners.map(function(p,i){
                 var invested=Number(p.amount||0);
-                var profitShare, investReturn;
-
-                if(shareMode==="equal"){
-                  // Investment fully returned + equal profit split
-                  investReturn=invested;
-                  profitShare=f.partners.length>0?Math.round(netProfit/f.partners.length):0;
-                } else {
-                  // Proportional based on investment %
-                  investReturn=invested;
-                  profitShare=totalInvested>0?Math.round((invested/totalInvested)*netProfit):Math.round(netProfit/f.partners.length);
-                }
-
-                var total=investReturn+profitShare;
+                var netToDivide=clientAmount-totalExp-totalInvested;
+                var profitShare=fPartners.length>0?Math.round(netToDivide/fPartners.length):0;
+                var total=invested+profitShare;
                 return(
                   <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#f0fdf4"}}>
-                    <td style={{padding:"9px 10px",fontWeight:800,fontSize:13}}>{p.name}</td>
-                    <td style={{padding:"9px 10px",color:C.accent,fontWeight:700}}>{pkr(invested)}</td>
-                    <td style={{padding:"9px 10px"}}>
-                      <span style={{background:"#dcfce7",color:C.accent,padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700}}>✓ {pkr(investReturn)}</span>
+                    <td style={{padding:"10px",fontWeight:800,fontSize:14}}>{p.name}</td>
+                    <td style={{padding:"10px",color:invested>0?C.accent:C.muted,fontWeight:600}}>
+                      {invested>0?pkr(invested):"—"}
                     </td>
-                    <td style={{padding:"9px 10px",color:profitShare>=0?C.gold:C.red,fontWeight:700,fontSize:13}}>
-                      {shareMode==="equal"
-                        ?<span style={{fontSize:10,color:C.muted}}>÷{f.partners.length} = </span>
-                        :<span style={{fontSize:10,color:C.muted}}>{totalInvested>0?Math.round((invested/totalInvested)*100):0}% = </span>
-                      }
-                      {pkr(profitShare)}
+                    <td style={{padding:"10px"}}>
+                      {invested>0
+                        ?<span style={{background:"#dcfce7",color:C.accent,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:700}}>+ {pkr(invested)}</span>
+                        :<span style={{color:C.muted,fontSize:11}}>—</span>}
                     </td>
-                    <td style={{padding:"9px 10px",fontWeight:900,fontSize:14,color:total>=invested?C.accent:C.red}}>
-                      {pkr(total)}
-                      <div style={{fontSize:9,color:profitShare>=0?C.gold:C.red,marginTop:2}}>
-                        {profitShare>=0?"+ ":"- "}{pkr(Math.abs(profitShare))} profit
+                    <td style={{padding:"10px",color:profitShare>=0?C.gold:C.red,fontWeight:700}}>
+                      <div style={{fontSize:11,color:C.muted}}>{pkr(netToDivide)} ÷ {fPartners.length}</div>
+                      <div style={{fontSize:14,fontWeight:900}}>{pkr(profitShare)}</div>
+                    </td>
+                    <td style={{padding:"10px",background:C.accentSoft,borderLeft:"2px solid "+C.accent}}>
+                      <div style={{fontWeight:900,fontSize:16,color:C.accent}}>{pkr(total)}</div>
+                      <div style={{fontSize:10,color:C.muted,marginTop:2}}>
+                        {invested>0?pkr(invested)+" wapas + ":""}{pkr(profitShare)} profit
                       </div>
                     </td>
                   </tr>
                 );
               })}
+              {fExpenses.map(function(e,i){return(
+                <tr key={"exp"+i} style={{borderTop:"1px solid #fde68a",background:"#fffbeb"}}>
+                  <td colSpan={3} style={{padding:"8px 10px",color:C.gold,fontWeight:600,fontSize:12}}>
+                    💸 {e.desc}{e.to?" → "+e.to:""}
+                  </td>
+                  <td style={{padding:"8px 10px",color:C.red,fontWeight:700,fontSize:12}}>Expense</td>
+                  <td style={{padding:"8px 10px",color:C.red,fontWeight:800,borderLeft:"2px solid #fde68a"}}>− {pkr(e.amount)}</td>
+                </tr>
+              );})}
             </tbody>
+            <tfoot>
+              <tr style={{borderTop:"3px solid "+C.accent,background:"#dcfce7"}}>
+                <td colSpan={2} style={{padding:"10px",fontWeight:800,fontSize:13,color:C.accent}}>
+                  Client: {pkr(clientAmount)}
+                </td>
+                <td colSpan={2} style={{padding:"10px",color:C.red,fontWeight:700,fontSize:12}}>
+                  Out: {pkr(totalExp+totalInvested)}
+                </td>
+                <td style={{padding:"10px",fontWeight:900,fontSize:14,color:C.accent,borderLeft:"2px solid "+C.accent}}>
+                  Baki: {pkr(clientAmount-totalExp-totalInvested)}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -531,7 +549,8 @@ function PartnerCaseModal(props){
 }
 
 function PartnerCasesTab(props){
-  var cases=props.cases,setCases=props.setCases,showToast=props.showToast;
+  var cases=Array.isArray(props.cases)?props.cases:[];
+  var setCases=props.setCases,showToast=props.showToast;
   var [showForm,setShowForm]=useState(false);
   var [editCase,setEditCase]=useState(null);
   var [viewCase,setViewCase]=useState(null);
@@ -550,8 +569,10 @@ function PartnerCasesTab(props){
     {cases.length===0&&<div style={{color:C.muted,fontSize:13,padding:"20px 0"}}>Koi case nahi — New Case click karein</div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
       {cases.map(function(c){
-        var totalIn=Number(c.clientAmount||c.partners.reduce(function(s,p){return s+Number(p.amount||0);},0));
-        var totalExp=c.expenses.reduce(function(s,e){return s+Number(e.amount||0);},0);
+        var pArr=Array.isArray(c.partners)?c.partners:[];
+        var eArr=Array.isArray(c.expenses)?c.expenses:[];
+        var totalIn=Number(c.clientAmount||pArr.reduce(function(s,p){return s+Number(p.amount||0);},0));
+        var totalExp=eArr.reduce(function(s,e){return s+Number(e.amount||0);},0);
         var net=totalIn-totalExp;
         return(
           <div key={c.id} style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:14,padding:18,boxShadow:C.shadow}}>
@@ -560,7 +581,7 @@ function PartnerCasesTab(props){
               <Badge status={c.status}/>
             </div>
             <div style={{display:"flex",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-              <div style={{fontSize:11}}><span style={{color:C.muted}}>Partners: </span><span style={{fontWeight:700,color:C.accent}}>{c.partners.length}</span></div>
+              <div style={{fontSize:11}}><span style={{color:C.muted}}>Partners: </span><span style={{fontWeight:700,color:C.accent}}>{pArr.length}</span></div>
               <div style={{fontSize:11}}><span style={{color:C.muted}}>In: </span><span style={{fontWeight:700,color:C.accent}}>{pkr(totalIn)}</span></div>
               <div style={{fontSize:11}}><span style={{color:C.muted}}>Out: </span><span style={{fontWeight:700,color:C.red}}>{pkr(totalExp)}</span></div>
               <div style={{fontSize:11}}><span style={{color:C.muted}}>Profit: </span><span style={{fontWeight:700,color:net>=0?C.gold:C.red}}>{pkr(net)}</span></div>
@@ -578,48 +599,101 @@ function PartnerCasesTab(props){
 
     {viewCase&&(
       <Modal title={"Case: "+viewCase.title} onClose={function(){setViewCase(null);}} wide={true}>
-        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <button onClick={function(){setEditCase(viewCase);setShowForm(true);setViewCase(null);}}
             style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:8,padding:"7px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
-            ✏️ Edit This Case
+            ✏️ Edit
+          </button>
+          <button onClick={function(){
+            var vp=Array.isArray(viewCase.partners)?viewCase.partners:[];
+            var ve=Array.isArray(viewCase.expenses)?viewCase.expenses:[];
+            var vc=Number(viewCase.clientAmount||0);
+            var vi=vp.reduce(function(s,p){return s+Number(p.amount||0);},0);
+            var vx=ve.reduce(function(s,e){return s+Number(e.amount||0);},0);
+            var vnd=vc-vx-vi;
+            var vps=vp.length>0?Math.round(vnd/vp.length):0;
+            var partnerRows=vp.map(function(p){
+              var inv=Number(p.amount||0);
+              var total=inv+vps;
+              return "<tr><td style='padding:10px;font-weight:800;font-size:15px'>"+p.name+"</td><td style='padding:10px;color:#16a34a;font-weight:700'>"+pkr(inv||0)+"</td><td style='padding:10px'>"+( inv>0?"<span style='background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700'>+ "+pkr(inv)+"</span>":"—")+"</td><td style='padding:10px;color:#b45309;font-weight:700'><div style='font-size:10px;color:#6b7280'>"+pkr(vnd)+" ÷ "+vp.length+"</div><div style='font-size:14px;font-weight:900'>"+pkr(vps)+"</div></td><td style='padding:10px;background:#f0fdf4;border-left:2px solid #16a34a'><div style='font-weight:900;font-size:16px;color:#16a34a'>"+pkr(total)+"</div><div style='font-size:10px;color:#6b7280'>"+(inv>0?pkr(inv)+" wapas + ":"")+pkr(vps)+" profit</div></td></tr>";
+            }).join("");
+            var expRows=ve.map(function(e){
+              return "<tr style='background:#fffbeb'><td colspan='3' style='padding:8px 10px;color:#b45309;font-weight:600'>💸 "+e.desc+(e.to?" → "+e.to:"")+"</td><td style='padding:8px 10px;color:#dc2626'>Expense</td><td style='padding:8px 10px;color:#dc2626;font-weight:800;border-left:2px solid #fde68a'>− "+pkr(e.amount)+"</td></tr>";
+            }).join("");
+            var html="<!DOCTYPE html><html><head><title>"+viewCase.title+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:#f0fdf4;padding:20px;color:#1f2937}.box{background:#fff;border-radius:14px;padding:28px;max-width:680px;margin:0 auto;border:2px solid #bbf7d0}.title{font-size:20px;font-weight:900;color:#16a34a;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:16px}.formula{background:#f0fdf4;border:2px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px}.fl{font-weight:700;color:#16a34a;font-size:11px;margin-bottom:6px}.fr{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.tag{background:#dcfce7;color:#16a34a;padding:3px 9px;border-radius:7px;font-weight:700}.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.card{flex:1;min-width:90px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:9px 11px;text-align:center}.cl{color:#6b7280;font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:2px}.cv{font-size:15px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f0fdf4;color:#16a34a;padding:9px 10px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:8px 10px;border-bottom:1px solid #d1f0dd}.foot{text-align:center;color:#9ca3af;font-size:10px;margin-top:16px;padding-top:12px;border-top:1px dashed #bbf7d0}@media print{body{background:#fff!important}*{-webkit-print-color-adjust:exact!important}}</style></head><body><div class='box'><div class='title'>"+viewCase.title+"</div><div class='sub'>Date: "+viewCase.date+(viewCase.notes?" | "+viewCase.notes:"")+" | Status: "+viewCase.status+"</div><div class='cards'><div class='card'><div class='cl'>Client Amount</div><div class='cv'>"+pkr(vc)+"</div></div><div class='card'><div class='cl'>Expenses</div><div class='cv' style='color:#dc2626'>"+pkr(vx)+"</div></div><div class='card'><div class='cl'>Investments</div><div class='cv' style='color:#b45309'>"+pkr(vi)+"</div></div><div class='card'><div class='cl'>Net to Divide</div><div class='cv'>"+pkr(vnd)+"</div></div><div class='card'><div class='cl'>Per Partner</div><div class='cv' style='color:#7c3aed'>"+pkr(vps)+"</div></div></div><div class='formula'><div class='fl'>📊 Hisaab:</div><div class='fr'><span class='tag'>"+pkr(vc)+"</span><span style='color:#dc2626'>− "+pkr(vx)+" Expenses</span><span style='color:#dc2626'>− "+pkr(vi)+" Investments</span><span style='font-weight:900;color:#16a34a;font-size:14px'>= "+pkr(vnd)+" ÷ "+vp.length+" = "+pkr(vps)+" each</span></div></div><table><tr><th>Partner</th><th>Investment</th><th>Wapas</th><th>Profit Share</th><th>TOTAL MILEGA</th></tr>"+partnerRows+expRows+"<tr style='border-top:3px solid #16a34a;background:#dcfce7'><td colspan='2' style='padding:10px;font-weight:800;color:#16a34a'>Client: "+pkr(vc)+"</td><td colspan='2' style='padding:10px;color:#dc2626;font-weight:700'>Out: "+pkr(vx+vi)+"</td><td style='padding:10px;font-weight:900;font-size:14px;color:#16a34a;border-left:2px solid #16a34a'>Baki: "+pkr(vnd)+"</td></tr></table><div class='foot'>Unofficial Record — "+viewCase.date+"</div></div></body></html>";
+            var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+          }} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
+            🖨️ Print
           </button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-          <div style={{background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:10,padding:14}}>
-            <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:8}}>Partners / Investors</div>
-            {viewCase.partners.map(function(p,i){return(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid "+C.border,fontSize:13}}>
-                <span style={{fontWeight:600}}>{p.name}</span><span style={{color:C.accent,fontWeight:700}}>{pkr(p.amount)}</span>
-              </div>
-            );})}
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontWeight:800,color:C.accent,fontSize:13}}>
-              <span>Total</span><span>{pkr(viewCase.partners.reduce(function(s,p){return s+Number(p.amount);},0))}</span>
-            </div>
-          </div>
-          <div style={{background:"#fef9f0",border:"1.5px solid #fde68a",borderRadius:10,padding:14}}>
-            <div style={{fontWeight:800,color:C.gold,fontSize:12,marginBottom:8}}>Expenses / Payments</div>
-            {viewCase.expenses.map(function(e,i){return(
-              <div key={i} style={{padding:"6px 0",borderBottom:"1px solid #fde68a",fontSize:12}}>
-                <div style={{display:"flex",justifyContent:"space-between"}}>
-                  <span style={{fontWeight:600}}>{e.desc}</span><span style={{color:C.red,fontWeight:700}}>{pkr(e.amount)}</span>
-                </div>
-                {e.to&&<div style={{color:C.muted,fontSize:10}}>To: {e.to}</div>}
-              </div>
-            );})}
-            <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontWeight:800,color:C.red,fontSize:13}}>
-              <span>Total</span><span>{pkr(viewCase.expenses.reduce(function(s,e){return s+Number(e.amount);},0))}</span>
-            </div>
-          </div>
-        </div>
         {function(){
-          var tIn=Number(viewCase.clientAmount||viewCase.partners.reduce(function(s,p){return s+Number(p.amount);},0));
-          var tOut=viewCase.expenses.reduce(function(s,e){return s+Number(e.amount);},0);
-          var net=tIn-tOut;
-          return(<div style={{background:C.white,border:"2px solid "+(net>=0?C.border:"#fecaca"),borderRadius:10,padding:"12px 16px",display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
-            <div style={{textAlign:"center"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase"}}>Total In</div><div style={{color:C.accent,fontWeight:900,fontSize:16}}>{pkr(tIn)}</div></div>
-            <div style={{textAlign:"center"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase"}}>Total Out</div><div style={{color:C.red,fontWeight:900,fontSize:16}}>{pkr(tOut)}</div></div>
-            <div style={{textAlign:"center"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase"}}>Net</div><div style={{color:net>=0?C.gold:C.red,fontWeight:900,fontSize:16}}>{pkr(net)}</div></div>
-          </div>);
+          var vp=Array.isArray(viewCase.partners)?viewCase.partners:[];
+          var ve=Array.isArray(viewCase.expenses)?viewCase.expenses:[];
+          var vc=Number(viewCase.clientAmount||0);
+          var vi=vp.reduce(function(s,p){return s+Number(p.amount||0);},0);
+          var vx=ve.reduce(function(s,e){return s+Number(e.amount||0);},0);
+          var vnd=vc-vx-vi;
+          var vps=vp.length>0?Math.round(vnd/vp.length):0;
+          return(
+            <div>
+              {/* Summary cards */}
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+                {[["Client Amount",pkr(vc),C.accent,"#dcfce7"],["Expenses",pkr(vx),C.red,"#fef9f0"],["Investments",pkr(vi),C.gold,"#fffbeb"],["Net to Divide",pkr(vnd),C.accent,"#f0fdf4"],["Per Partner",pkr(vps),"#7c3aed","#f5f3ff"]].map(function(s){return(
+                  <div key={s[0]} style={{flex:1,minWidth:90,background:s[3],borderRadius:10,padding:"9px 11px",textAlign:"center",border:"1px solid "+C.border}}>
+                    <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{s[0]}</div>
+                    <div style={{color:s[2],fontWeight:900,fontSize:14}}>{s[1]}</div>
+                  </div>
+                );})}
+              </div>
+              {/* Formula */}
+              <div style={{background:"#f0fdf4",border:"2px solid "+C.border,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:12}}>
+                <div style={{fontWeight:800,color:C.accent,marginBottom:5}}>📊 Hisaab:</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+                  <span style={{background:"#dcfce7",color:C.accent,padding:"3px 9px",borderRadius:7,fontWeight:700}}>{pkr(vc)}</span>
+                  <span style={{color:C.red}}>− {pkr(vx)} Expenses</span>
+                  <span style={{color:C.red}}>− {pkr(vi)} Investments</span>
+                  <span style={{fontWeight:900,color:C.accent,fontSize:14}}>= {pkr(vnd)} ÷ {vp.length} = {pkr(vps)} each</span>
+                </div>
+              </div>
+              {/* Breakdown table */}
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:10}}>
+                <thead><tr style={{background:C.accentSoft}}>
+                  {["Partner","Investment","Wapas","Profit Share","TOTAL MILEGA"].map(function(h){return <th key={h} style={{padding:"9px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase",borderBottom:"2px solid "+C.border}}>{h}</th>;})}
+                </tr></thead>
+                <tbody>
+                  {vp.map(function(p,i){
+                    var inv=Number(p.amount||0);
+                    var share=vps;
+                    var total=inv+share;
+                    return(
+                      <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#f0fdf4"}}>
+                        <td style={{padding:"10px",fontWeight:800,fontSize:14}}>{p.name}</td>
+                        <td style={{padding:"10px",color:inv>0?C.accent:C.muted}}>{inv>0?pkr(inv):"—"}</td>
+                        <td style={{padding:"10px"}}>
+                          {inv>0?<span style={{background:"#dcfce7",color:C.accent,padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700}}>+ {pkr(inv)}</span>:<span style={{color:C.muted}}>—</span>}
+                        </td>
+                        <td style={{padding:"10px",color:C.gold,fontWeight:700}}>
+                          <div style={{fontSize:10,color:C.muted}}>{pkr(vnd)} ÷ {vp.length}</div>
+                          <div style={{fontSize:14,fontWeight:900}}>{pkr(share)}</div>
+                        </td>
+                        <td style={{padding:"10px",background:C.accentSoft,borderLeft:"2px solid "+C.accent}}>
+                          <div style={{fontWeight:900,fontSize:16,color:C.accent}}>{pkr(total)}</div>
+                          <div style={{fontSize:10,color:C.muted}}>{inv>0?pkr(inv)+" wapas + ":""}{pkr(share)} profit</div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {ve.map(function(e,i){return(
+                    <tr key={"e"+i} style={{borderTop:"1px solid #fde68a",background:"#fffbeb"}}>
+                      <td colSpan={3} style={{padding:"8px 10px",color:C.gold,fontWeight:600}}>💸 {e.desc}{e.to?" → "+e.to:""}</td>
+                      <td style={{padding:"8px 10px",color:C.red,fontWeight:700}}>Expense</td>
+                      <td style={{padding:"8px 10px",color:C.red,fontWeight:800,borderLeft:"2px solid #fde68a"}}>− {pkr(e.amount)}</td>
+                    </tr>
+                  );})}
+                </tbody>
+              </table>
+            </div>
+          );
         }()}
       </Modal>
     )}
@@ -884,6 +958,19 @@ function PersonalExpenses(props){
           <div style={{fontSize:10,color:fbStatus==="synced"?C.accent:C.muted,fontWeight:700,padding:"4px 8px",background:fbStatus==="synced"?"#dcfce7":"#f1f5f9",borderRadius:20}}>
             {fbStatus==="synced"?"🟢 Firebase Synced":"💾 Local Only"}
           </div>
+          <button onClick={function(){
+            var rows=filtered.map(function(e,i){
+              return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+e.date+"</td><td style='font-weight:700'>"+e.desc+"</td><td>"+e.category+"</td><td style='color:#dc2626;font-weight:700'>"+pkr(e.amount)+"</td><td>"+(e.notes||"--")+"</td></tr>";
+            }).join("");
+            var sectionLabel=activeSection==="personal"?"Personal":"Family";
+            var html="<!DOCTYPE html><html><head><title>"+sectionLabel+" Expenses</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:15px;color:#1f2937}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:10px}.total{background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:8px 14px;margin-bottom:12px;display:inline-block;font-size:14px;font-weight:900;color:#dc2626}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#f0fdf4;color:#16a34a;padding:8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:7px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;padding-top:8px;border-top:1px dashed #bbf7d0}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+            +"<div class='title'>"+sectionLabel+" Expenses — "+period+"</div>"
+            +"<div class='sub'>"+filtered.length+" entries</div>"
+            +"<div class='total'>Total: "+pkr(total)+"</div>"
+            +"<table><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Notes</th></tr>"+rows+"</table>"
+            +"<div class='foot'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
+            var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+          }} style={{background:activeSection==="personal"?"#0284c7":C.gold,color:"#fff",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:800,cursor:"pointer",fontSize:11}}>🖨️ Print</button>
           <button onClick={function(){setShowForm(true);setForm(Object.assign({},emptyExp,{section:activeSection}));}}
             style={{background:activeSection==="personal"?C.accent:C.gold,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>
             + Add
@@ -1073,6 +1160,9 @@ export default function App(){
   var [eMode,setEMode]=useState("all");
   var [eMo,setEMo]=useState(new Date().getMonth());
   var [eYr,setEYr]=useState(new Date().getFullYear());
+  var [bMode,setBMode]=useState("all");
+  var [bMo,setBMo]=useState(new Date().getMonth());
+  var [bYr,setBYr]=useState(new Date().getFullYear());
 
   var eb={customer:"",destination:"",date:"",amount:"",cost:"",commission:"",status:"Pending",type:"Flight Only",account:"Bank Alfalah",notes:"",reference:""};
   var [showBF,setShowBF]=useState(false);var [bf,setBf]=useState(eb);
@@ -1099,6 +1189,15 @@ export default function App(){
       return d.getMonth()===eMo&&d.getFullYear()===eYr;
     });
   },[fE,eMode,eMo,eYr]);
+  var fBFiltered=useMemo(function(){
+    return fB.filter(function(b){
+      if(bMode==="all")return true;
+      if(!b.date)return false;
+      var d=new Date(b.date);
+      if(bMode==="year")return d.getFullYear()===bYr;
+      return d.getMonth()===bMo&&d.getFullYear()===bYr;
+    });
+  },[fB,bMode,bMo,bYr]);
 
   function addB(){
     if(!bf.customer||!bf.destination||!bf.amount)return;
@@ -1205,19 +1304,93 @@ export default function App(){
 
         {tab==="bookings"&&(
           <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
               <h2 style={{margin:0,fontSize:15,fontWeight:800,color:C.accent}}>Bookings & Invoices</h2>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                 <input value={bs} onChange={function(e){setBs(e.target.value);}} placeholder="Search bookings..."
-                  style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 11px",fontSize:12,color:C.textBody,outline:"none",minWidth:160}}/>
+                  style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 11px",fontSize:12,color:C.textBody,outline:"none",minWidth:140}}/>
+                <button onClick={function(){
+                  var inp=document.createElement("input");inp.type="file";inp.accept=".csv,.xlsx,.xls";
+                  inp.onchange=function(ev){
+                    var file=ev.target.files[0];if(!file)return;
+                    var reader=new FileReader();
+                    reader.onload=function(e){
+                      var text=e.target.result;
+                      var lines=text.split("\n").filter(function(l){return l.trim();});
+                      if(lines.length<2){alert("File empty ya format galat hai");return;}
+                      var headers=lines[0].split(",").map(function(h){return h.trim().toLowerCase().replace(/['"]/g,"");});
+                      var imported=[];
+                      for(var i=1;i<lines.length;i++){
+                        var cols=lines[i].split(",").map(function(c){return c.trim().replace(/['"]/g,"");});
+                        var row={};
+                        headers.forEach(function(h,j){row[h]=cols[j]||"";});
+                        if(!row.customer&&!row.name)continue;
+                        imported.push({
+                          id:uid("B"),
+                          customer:row.customer||row.name||"",
+                          destination:row.destination||row.dest||"",
+                          type:row.type||row.package||"Other",
+                          date:row.date||"",
+                          amount:Number(row.amount||row.sale||0),
+                          cost:Number(row.cost||0),
+                          commission:Number(row.commission||row.comm||0),
+                          status:row.status||"Pending",
+                          account:row.account||"Bank Alfalah",
+                          notes:row.notes||"",
+                          reference:row.reference||row.ref||"",
+                        });
+                      }
+                      if(imported.length===0){alert("Koi valid data nahi mila");return;}
+                      if(window.confirm(""+imported.length+" bookings import karein?")){
+                        setB(bookings.concat(imported));
+                        alert(imported.length+" bookings import ho gayi!");
+                      }
+                    };
+                    reader.readAsText(file);
+                  };
+                  inp.click();
+                }} style={{background:"#0284c7",color:"#fff",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:800,cursor:"pointer",fontSize:11}}>📂 Import CSV</button>
                 <button onClick={function(){setShowBF(true);}} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>+ New</button>
+              </div>
+            </div>
+            {/* Booking filter bar */}
+            <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+              <div style={{display:"flex",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+                {["all","month","year"].map(function(m){return(
+                  <button key={m} onClick={function(){setBMode(m);}} style={{padding:"6px 11px",border:"none",background:bMode===m?C.accent:"transparent",color:bMode===m?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11,textTransform:"capitalize"}}>{m==="all"?"All":m==="month"?"Monthly":"Yearly"}</button>
+                );})}
+              </div>
+              {bMode==="month"&&<select value={bMo} onChange={function(e){setBMo(Number(e.target.value));}} style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 9px",fontSize:12,outline:"none"}}>
+                {MONTHS.map(function(m,i){return <option key={m} value={i}>{m}</option>;})}
+              </select>}
+              {bMode!=="all"&&<select value={bYr} onChange={function(e){setBYr(Number(e.target.value));}} style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 9px",fontSize:12,outline:"none"}}>
+                {[2023,2024,2025,2026,2027].map(function(y){return <option key={y}>{y}</option>;})}
+              </select>}
+              <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+                <span style={{color:C.muted,fontSize:11}}>{fBFiltered.length} bookings | {pkr(fBFiltered.reduce(function(s,b){return s+Number(b.amount);},0))}</span>
+                <button onClick={function(){
+                  var rows=fBFiltered.map(function(b,i){
+                    var p=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);
+                    return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+b.id+"</td><td>"+b.customer+"</td><td>"+b.destination+"</td><td>"+b.type+"</td><td>"+b.date+"</td><td>"+pkr(b.amount)+"</td><td>"+pkr(b.cost||0)+"</td><td>"+pkr(b.commission||0)+"</td><td style='color:"+(p>=0?"#16a34a":"#dc2626")+"'>"+pkr(p)+"</td><td>"+(b.account||"")+"</td><td>"+b.status+"</td><td>"+(b.notes||"")+"</td></tr>";
+                  }).join("");
+                  var period=bMode==="all"?"All Time":bMode==="year"?String(bYr):MONTHS[bMo]+" "+bYr;
+                  var totalSale=fBFiltered.reduce(function(s,b){return s+Number(b.amount);},0);
+                  var totalProfit=fBFiltered.reduce(function(s,b){return s+Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);},0);
+                  var html="<!DOCTYPE html><html><head><title>Bookings "+period+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:15px;color:#1f2937}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:10px}.stats{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}.stat{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;flex:1}.sl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase}.sv{font-size:15px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" / "+AGENCY.phone2+"<br>"+AGENCY.email2+"<br>"+AGENCY.address+"</div></div>"
+                  +"<div class='title'>Bookings Report — "+period+"</div>"
+                  +"<div class='stats'><div class='stat'><div class='sl'>Total Bookings</div><div class='sv'>"+fBFiltered.length+"</div></div><div class='stat'><div class='sl'>Total Sale</div><div class='sv'>"+pkr(totalSale)+"</div></div><div class='stat'><div class='sl'>Total Profit</div><div class='sv'>"+pkr(totalProfit)+"</div></div><div class='stat'><div class='sl'>Paid</div><div class='sv'>"+fBFiltered.filter(function(b){return b.status==="Paid";}).length+"</div></div><div class='stat'><div class='sl'>Pending</div><div class='sv'>"+fBFiltered.filter(function(b){return b.status==="Pending";}).length+"</div></div></div>"
+                  +"<table><tr><th>ID</th><th>Customer</th><th>Destination</th><th>Package</th><th>Date</th><th>Sale</th><th>Cost</th><th>Comm.</th><th>Profit</th><th>Account</th><th>Status</th><th>Notes</th></tr>"+rows+"</table>"
+                  +"<div class='foot'>"+AGENCY.name+" | Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
+                  var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+                }} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:800,cursor:"pointer",fontSize:11}}>🖨️ Print</button>
               </div>
             </div>
             <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:14,overflow:"auto",boxShadow:C.shadow}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:800}}>
                 <Th cols={["ID","Customer","Destination","Type","Date","Sale","Cost","Comm.","Profit","Account","Status","Actions"]}/>
                 <tbody>
-                  {fB.map(function(b,i){var p=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);return(
+                  {fBFiltered.map(function(b,i){var p=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);return(
                     <tr key={b.id} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
                       <td style={{padding:"8px 11px",color:C.muted,fontSize:10,fontWeight:600}}>{b.id}</td>
                       <td style={{padding:"8px 11px",fontWeight:700}}>{b.customer}</td>
@@ -1240,7 +1413,7 @@ export default function App(){
                       </td>
                     </tr>
                   );})}
-                  {fB.length===0&&<tr><td colSpan={12} style={{padding:18,textAlign:"center",color:C.muted}}>Koi booking nahi</td></tr>}
+                  {fBFiltered.length===0&&<tr><td colSpan={12} style={{padding:18,textAlign:"center",color:C.muted}}>Is period mein koi booking nahi</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -1273,9 +1446,20 @@ export default function App(){
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
               <h2 style={{margin:0,fontSize:15,fontWeight:800,color:C.accent}}>Customers</h2>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                 <input value={cs} onChange={function(e){setCs(e.target.value);}} placeholder="Search customers..."
-                  style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 11px",fontSize:12,color:C.textBody,outline:"none",minWidth:160}}/>
+                  style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 11px",fontSize:12,color:C.textBody,outline:"none",minWidth:140}}/>
+                <button onClick={function(){
+                  var rows=fC.map(function(c,i){
+                    return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+c.id+"</td><td style='font-weight:700'>"+c.name+"</td><td>"+c.phone+"</td><td>"+(c.email||"--")+"</td><td>"+(c.city||"--")+"</td><td style='font-family:monospace'>"+(c.passport||"--")+"</td><td>"+(c.reference||"--")+"</td><td>"+(c.notes||"--")+"</td></tr>";
+                  }).join("");
+                  var html="<!DOCTYPE html><html><head><title>Customers</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:15px;color:#1f2937}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:10px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" / "+AGENCY.phone2+"<br>"+AGENCY.email2+"</div></div>"
+                  +"<div class='title'>Customer List ("+fC.length+")</div>"
+                  +"<table><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>City</th><th>Passport</th><th>Reference</th><th>Notes</th></tr>"+rows+"</table>"
+                  +"<div class='foot'>"+AGENCY.name+" | Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
+                  var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+                }} style={{background:"#0284c7",color:"#fff",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:800,cursor:"pointer",fontSize:11}}>🖨️ Print</button>
                 <button onClick={function(){setShowCF(true);}} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>+ Add</button>
               </div>
             </div>
@@ -1328,6 +1512,21 @@ export default function App(){
               <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                 <input value={es} onChange={function(e){setEs(e.target.value);}} placeholder="Search expenses..."
                   style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 11px",fontSize:12,color:C.textBody,outline:"none",minWidth:140}}/>
+                <button onClick={function(){
+                  var rows=fEFiltered.map(function(e,i){
+                    return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+e.id+"</td><td style='font-weight:700'>"+e.description+"</td><td>"+e.category+"</td><td>"+e.date+"</td><td style='color:#dc2626;font-weight:700'>"+pkr(e.amount)+"</td><td>"+(e.account||"--")+"</td><td>"+(e.notes||"--")+"</td></tr>";
+                  }).join("");
+                  var period=eMode==="all"?"All Time":eMode==="year"?String(eYr):MONTHS[eMo]+" "+eYr;
+                  var total=fEFiltered.reduce(function(s,e){return s+Number(e.amount);},0);
+                  var html="<!DOCTYPE html><html><head><title>Expenses "+period+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:15px;color:#1f2937}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:6px}.sub{color:#6b7280;font-size:12px;margin-bottom:10px}.total{background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:8px 14px;margin-bottom:12px;display:inline-block;font-size:14px;font-weight:900;color:#dc2626}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+"<br>"+AGENCY.email2+"</div></div>"
+                  +"<div class='title'>Expenses — "+period+"</div>"
+                  +"<div class='sub'>Total Entries: "+fEFiltered.length+"</div>"
+                  +"<div class='total'>Total: "+pkr(total)+"</div>"
+                  +"<table><tr><th>ID</th><th>Description</th><th>Category</th><th>Date</th><th>Amount</th><th>Account</th><th>Notes</th></tr>"+rows+"</table>"
+                  +"<div class='foot'>"+AGENCY.name+" | Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
+                  var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+                }} style={{background:C.red,color:"#fff",border:"none",borderRadius:8,padding:"7px 12px",fontWeight:800,cursor:"pointer",fontSize:11}}>🖨️ Print</button>
                 <button onClick={function(){setShowEF(true);}} style={{background:C.gold,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>+ Add</button>
               </div>
             </div>
