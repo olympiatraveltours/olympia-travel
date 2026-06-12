@@ -1091,7 +1091,159 @@ function PersonalExpenses(props){
   );
 }
 
+
+// ─── QUERIES TAB ─────────────────────────────────────────────
+function QueriesTab(props){
+  var queries=Array.isArray(props.queries)?props.queries:[];
+  var setQueries=props.setQueries;
+  var currentUser=props.currentUser;
+  var isAdmin=currentUser&&currentUser.role==="admin";
+
+  var emptyQ={id:"",name:"",phone:"",email:"",destination:"",budget:"",message:"",status:"New",assignedTo:"",notes:"",date:new Date().toISOString().split("T")[0]};
+  var [showForm,setShowForm]=useState(false);
+  var [editQ,setEditQ]=useState(null);
+  var [filterStatus,setFilterStatus]=useState("all");
+  var [search,setSearch]=useState("");
+
+  var filtered=queries.filter(function(q){
+    var matchStatus=filterStatus==="all"||q.status===filterStatus;
+    var matchSearch=!search||[q.name,q.phone,q.destination,q.email].join(" ").toLowerCase().includes(search.toLowerCase());
+    return matchStatus&&matchSearch;
+  }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+
+  function saveQ(q){
+    var updated=editQ?queries.map(function(x){return x.id===q.id?q:x;}):queries.concat([q]);
+    setQueries(updated);setShowForm(false);setEditQ(null);
+  }
+  function delQ(id){if(window.confirm("Delete this query?"))setQueries(queries.filter(function(x){return x.id!==id;}));}
+
+  var statusColors={New:{bg:"#dbeafe",c:"#1d4ed8"},Contacted:{bg:"#fef9c3",c:"#a16207"},InProgress:{bg:"#ede9fe",c:"#7c3aed"},Confirmed:{bg:"#dcfce7",c:"#15803d"},Closed:{bg:"#f1f5f9",c:"#475569"},Lost:{bg:"#fee2e2",c:"#b91c1c"}};
+  var statuses=["New","Contacted","InProgress","Confirmed","Closed","Lost"];
+
+  function QForm(fp){
+    var [f,setF]=useState(fp.q?Object.assign({},fp.q):emptyQ);
+    return(
+      <Modal title={fp.isNew?"New Query":"Edit Query"} onClose={fp.onClose} wide={true}>
+        <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
+          <Field label="Customer Name" value={f.name} onChange={function(v){setF(Object.assign({},f,{name:v}));}} half={true}/>
+          <Field label="Phone" value={f.phone} onChange={function(v){setF(Object.assign({},f,{phone:v}));}} half={true}/>
+          <Field label="Email" value={f.email} onChange={function(v){setF(Object.assign({},f,{email:v}));}} half={true}/>
+          <Field label="Destination" value={f.destination} onChange={function(v){setF(Object.assign({},f,{destination:v}));}} half={true}/>
+          <Field label="Budget (PKR)" value={f.budget} onChange={function(v){setF(Object.assign({},f,{budget:v}));}} half={true}/>
+          <Field label="Date" value={f.date} onChange={function(v){setF(Object.assign({},f,{date:v}));}} type="date" half={true}/>
+          <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={statuses} half={true}/>
+          <Field label="Assigned To" value={f.assignedTo} onChange={function(v){setF(Object.assign({},f,{assignedTo:v}));}} half={true}/>
+          <Field label="Message / Details" value={f.message} onChange={function(v){setF(Object.assign({},f,{message:v}));}} rows={3}/>
+          <Field label="Follow-up Notes" value={f.notes} onChange={function(v){setF(Object.assign({},f,{notes:v}));}} rows={2}/>
+        </div>
+        <button onClick={function(){fp.onSave(Object.assign({},f,{id:f.id||uid("Q")}));}}
+          style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
+          Save Query
+        </button>
+      </Modal>
+    );
+  }
+
+  var counts=statuses.reduce(function(a,s){a[s]=queries.filter(function(q){return q.status===s;}).length;return a;},{});
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Queries</h2>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <input value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Search..."
+            style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 11px",fontSize:12,outline:"none",minWidth:140}}/>
+          <button onClick={function(){setEditQ(null);setShowForm(true);}}
+            style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>+ New Query</button>
+        </div>
+      </div>
+
+      {/* Status summary cards */}
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        {statuses.map(function(s){
+          var sc=statusColors[s]||{bg:"#f1f5f9",c:"#475569"};
+          return(
+            <div key={s} onClick={function(){setFilterStatus(filterStatus===s?"all":s);}}
+              style={{flex:1,minWidth:80,background:filterStatus===s?sc.bg:"#fff",border:"2px solid "+(filterStatus===s?sc.c:C.border),borderRadius:10,padding:"9px 10px",textAlign:"center",cursor:"pointer"}}>
+              <div style={{color:sc.c,fontWeight:900,fontSize:18}}>{counts[s]||0}</div>
+              <div style={{color:filterStatus===s?sc.c:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>{s}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Queries list */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:12}}>
+        {filtered.map(function(q){
+          var sc=statusColors[q.status]||{bg:"#f1f5f9",c:"#475569"};
+          return(
+            <div key={q.id} style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:14,padding:16,boxShadow:C.shadow}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                <div>
+                  <div style={{fontWeight:800,fontSize:14}}>{q.name}</div>
+                  <div style={{color:C.muted,fontSize:11,marginTop:2}}>{q.date}</div>
+                </div>
+                <span style={{background:sc.bg,color:sc.c,padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700}}>{q.status}</span>
+              </div>
+              <div style={{fontSize:12,marginBottom:8}}>
+                {q.phone&&<div style={{marginBottom:3}}>📞 <b>{q.phone}</b></div>}
+                {q.email&&<div style={{marginBottom:3,color:C.muted}}>✉️ {q.email}</div>}
+                {q.destination&&<div style={{marginBottom:3}}>✈️ <b>{q.destination}</b>{q.budget?" | 💰 "+pkr(q.budget):""}</div>}
+                {q.message&&<div style={{color:C.muted,fontStyle:"italic",marginTop:5,fontSize:11,borderTop:"1px solid "+C.border,paddingTop:5}}>{q.message}</div>}
+                {q.notes&&<div style={{background:C.accentSoft,borderRadius:6,padding:"4px 8px",marginTop:5,fontSize:11}}>📝 {q.notes}</div>}
+                {q.assignedTo&&<div style={{color:C.muted,fontSize:10,marginTop:4}}>👤 Assigned: {q.assignedTo}</div>}
+              </div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                {statuses.filter(function(s){return s!==q.status;}).slice(0,3).map(function(s){
+                  var sc2=statusColors[s]||{bg:"#f1f5f9",c:"#475569"};
+                  return(
+                    <button key={s} onClick={function(){saveQ(Object.assign({},q,{status:s}));}}
+                      style={{background:sc2.bg,border:"1px solid "+sc2.c,color:sc2.c,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>
+                      → {s}
+                    </button>
+                  );
+                })}
+                <button onClick={function(){setEditQ(q);setShowForm(true);}}
+                  style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10,fontWeight:700,marginLeft:"auto"}}>Edit</button>
+                {isAdmin&&<button onClick={function(){delQ(q.id);}}
+                  style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>Del</button>}
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length===0&&(
+          <div style={{gridColumn:"1/-1",padding:"30px 0",textAlign:"center",color:C.muted}}>
+            {queries.length===0?"Koi query nahi — + New Query se add karein":"Koi query is filter mein nahi mili"}
+          </div>
+        )}
+      </div>
+
+      {showForm&&<QForm q={editQ} isNew={!editQ} onSave={saveQ} onClose={function(){setShowForm(false);setEditQ(null);}}/>}
+    </div>
+  );
+}
+
 export default function App(){
+  var [currentUser,setCurrentUser]=useState(function(){
+    try{
+      var u=localStorage.getItem("olympia_user");
+      if(!u) return null;
+      var parsed=JSON.parse(u);
+      // Validate user exists in USERS list
+      var validIds=["admin","staff1","staff2"];
+      if(!parsed||!parsed.id||!validIds.includes(parsed.id)) {
+        localStorage.removeItem("olympia_user");
+        return null;
+      }
+      return parsed;
+    }catch(e){
+      localStorage.removeItem("olympia_user");
+      return null;
+    }
+  });
+  var [loginErr,setLoginErr]=useState("");
+  var [loginId,setLoginId]=useState("");
+  var [loginPw,setLoginPw]=useState("");
   var [tab,setTab]=useState("dashboard");
   var [bookings,setBR] =useState(function(){return ld("olympia_bookings",SB);});
   var [customers,setCR]=useState(function(){return ld("olympia_customers",SC);});
@@ -1102,10 +1254,40 @@ export default function App(){
     return Array.isArray(d)?d:[];
   });
   var [personal,setPersonalR]=useState(function(){return ld("olympia_personal",[]);});
+  var [queries,setQueriesR]=useState(function(){
+    var d=ld("olympia_queries",[]);
+    return Array.isArray(d)?d:[];
+  });
   var [fbStatus,setFbStatus]=useState("connecting");
   var [toast,setToast]=useState(false);
 
   function showToast(){setToast(true);setTimeout(function(){setToast(false);},2000);}
+
+  var USERS=[
+    {id:"admin",  name:"Admin",   password:"olympia2026", role:"admin"},
+    {id:"staff1", name:"Staff 1", password:"staff123",    role:"staff"},
+    {id:"staff2", name:"Staff 2", password:"staff456",    role:"staff"},
+  ];
+  var ADMIN_TABS=["dashboard","bookings","customers","expenses","reports","partners","personal","marketing","queries"];
+  var STAFF_TABS=["bookings","queries"];
+  function getAccessTabs(role){return role==="admin"?ADMIN_TABS:STAFF_TABS;}
+
+  function doLogin(){
+    var u=USERS.find(function(x){return x.id===loginId&&x.password===loginPw;});
+    if(u){
+      setCurrentUser(u);
+      localStorage.setItem("olympia_user",JSON.stringify(u));
+      setLoginErr("");
+      setTab(u.role==="admin"?"dashboard":"queries");
+    } else {
+      setLoginErr("Galat ID ya Password!");
+    }
+  }
+  function doLogout(){
+    setCurrentUser(null);
+    localStorage.removeItem("olympia_user");
+    setLoginId("");setLoginPw("");
+  }
 
   // Firebase init + full bidirectional sync
   useEffect(function(){
@@ -1119,6 +1301,7 @@ export default function App(){
         {fb:"olympia_packages",  setter:setPR,        lk:"olympia_packages",  getter:function(){return ld("olympia_packages",SP);}},
         {fb:"olympia_cases",     setter:setCasesR,    lk:"olympia_cases",     getter:function(){return ld("olympia_cases",SPARTNER);}},
         {fb:"olympia_personal",  setter:setPersonalR, lk:"olympia_personal",  getter:function(){return ld("olympia_personal",[]);}},
+        {fb:"olympia_queries",   setter:setQueriesR,  lk:"olympia_queries",   getter:function(){return ld("olympia_queries",[]);}},
       ];
 
       keys.forEach(function(kv){
@@ -1146,6 +1329,10 @@ export default function App(){
     var arr=Array.isArray(d)?d:[];
     setCasesR(arr);sv("olympia_cases",arr);fbSave("olympia_cases",arr);showToast();
   }
+  function setQueries(d){
+    var arr=Array.isArray(d)?d:[];
+    setQueriesR(arr);sv("olympia_queries",arr);fbSave("olympia_queries",arr);showToast();
+  }
   function setPersonal(d){
     setPersonalR(d);
     sv("olympia_personal",d);
@@ -1166,7 +1353,7 @@ export default function App(){
 
   var eb={customer:"",destination:"",date:"",amount:"",cost:"",commission:"",status:"Pending",type:"Flight Only",account:"Bank Alfalah",notes:"",reference:""};
   var [showBF,setShowBF]=useState(false);var [bf,setBf]=useState(eb);
-  var ec={name:"",phone:"",email:"",city:"",passport:"",notes:"",reference:""};
+  var ec={name:"",phone:"",email:"",city:"",passport:"",notes:"",reference:"",source:"PR"};
   var [showCF,setShowCF]=useState(false);var [cf,setCf]=useState(ec);
   var ee={description:"",category:"Operations",date:"",amount:"",account:"Bank Alfalah",notes:""};
   var [showEF,setShowEF]=useState(false);var [ef,setEf]=useState(ee);
@@ -1211,13 +1398,51 @@ export default function App(){
 
   function Th(pr){return <thead><tr style={{background:C.accentSoft}}>{pr.cols.map(function(h){return <th key={h} style={{padding:"9px 11px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,letterSpacing:.5,textTransform:"uppercase"}}>{h}</th>;})}</tr></thead>;}
 
-  var TABS=[
+  var ALL_TABS=[
     {id:"dashboard",l:"Dashboard"},{id:"bookings",l:"Bookings"},
     {id:"customers",l:"Customers"},{id:"expenses",l:"Expenses"},
     {id:"reports",l:"Reports"},{id:"partners",l:"Partners"},
-    {id:"personal",l:"My Expenses"},
-    {id:"marketing",l:"Marketing"},
+    {id:"personal",l:"My Expenses"},{id:"marketing",l:"Marketing"},
+    {id:"queries",l:"Queries"},
   ];
+  var accessTabs=currentUser?getAccessTabs(currentUser.role):[];
+  var TABS=ALL_TABS.filter(function(t){return accessTabs.includes(t.id);});
+
+  // LOGIN SCREEN
+  if(!currentUser){
+    return(
+      <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#14532d,#16a34a)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',Arial,sans-serif"}}>
+        <div style={{background:"#fff",borderRadius:18,padding:36,width:340,boxShadow:"0 8px 40px rgba(0,0,0,.2)"}}>
+          <div style={{textAlign:"center",marginBottom:24}}>
+            <img src={LOGO_URI} alt="Olympia" style={{height:70,width:"auto",marginBottom:10}}/>
+            <div style={{fontWeight:900,fontSize:18,color:C.accent}}>Olympia Travel & Tours</div>
+            <div style={{color:C.muted,fontSize:12}}>Accounts System</div>
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={{display:"block",color:C.accent,fontSize:11,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>User ID</label>
+            <input value={loginId} onChange={function(e){setLoginId(e.target.value);}} placeholder="admin / staff1 / staff2"
+              onKeyDown={function(e){if(e.key==="Enter")doLogin();}}
+              style={{width:"100%",border:"1.5px solid "+C.border,borderRadius:9,padding:"10px 12px",fontSize:13,outline:"none",boxSizing:"border-box",background:C.accentSoft}}/>
+          </div>
+          <div style={{marginBottom:16}}>
+            <label style={{display:"block",color:C.accent,fontSize:11,fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:.5}}>Password</label>
+            <input value={loginPw} onChange={function(e){setLoginPw(e.target.value);}} placeholder="Password" type="password"
+              onKeyDown={function(e){if(e.key==="Enter")doLogin();}}
+              style={{width:"100%",border:"1.5px solid "+C.border,borderRadius:9,padding:"10px 12px",fontSize:13,outline:"none",boxSizing:"border-box",background:C.accentSoft}}/>
+          </div>
+          {loginErr&&<div style={{background:C.redBg,color:C.red,border:"1px solid #fecaca",borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:12,fontWeight:700}}>{loginErr}</div>}
+          <button onClick={doLogin} style={{width:"100%",background:"linear-gradient(135deg,#14532d,#16a34a)",color:"#fff",border:"none",borderRadius:10,padding:"12px 0",fontWeight:900,cursor:"pointer",fontSize:15}}>
+            Login
+          </button>
+          <div style={{marginTop:16,background:C.accentSoft,borderRadius:9,padding:"10px 12px",fontSize:11,color:C.muted}}>
+            <div style={{fontWeight:700,color:C.accent,marginBottom:4}}>Access Levels:</div>
+            <div>🔑 Admin — Full Access</div>
+            <div>👤 Staff — Queries + Bookings</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return(
     <div style={{minHeight:"100vh",background:C.bg,fontFamily:"'Segoe UI','Inter',Arial,sans-serif",color:C.textBody}}>
@@ -1229,13 +1454,14 @@ export default function App(){
             <div style={{color:"rgba(255,255,255,.7)",fontSize:10}}>{AGENCY.phone1} - {AGENCY.phone2}</div>
           </div>
         </div>
-        <div style={{color:"rgba(255,255,255,.75)",fontSize:11,textAlign:"right"}}>
-          <div>{dstr()}</div>
-          <div style={{fontSize:9,marginTop:2}}>
-            {fbStatus==="synced"
-              ?<span style={{color:"#86efac"}}>● Live Sync ON</span>
-              :<span style={{color:"rgba(255,255,255,.5)"}}>● Connecting...</span>
-            }
+        <div style={{color:"rgba(255,255,255,.75)",fontSize:11,textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:11}}>{dstr()}</span>
+            <button onClick={doLogout} style={{background:"rgba(255,255,255,.2)",border:"1px solid rgba(255,255,255,.3)",color:"#fff",borderRadius:6,padding:"3px 9px",cursor:"pointer",fontSize:10,fontWeight:700}}>Logout</button>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{background:"rgba(255,255,255,.15)",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{currentUser.name} ({currentUser.role})</span>
+            {fbStatus==="synced"?<span style={{color:"#86efac",fontSize:9}}>● Live Sync ON</span>:<span style={{color:"rgba(255,255,255,.5)",fontSize:9}}>● Connecting...</span>}
           </div>
         </div>
       </div>
@@ -1445,10 +1671,22 @@ export default function App(){
         {tab==="customers"&&(
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-              <h2 style={{margin:0,fontSize:15,fontWeight:800,color:C.accent}}>Customers</h2>
+              <div>
+                <h2 style={{margin:0,fontSize:15,fontWeight:800,color:C.accent}}>Customers</h2>
+                <div style={{display:"flex",gap:10,marginTop:4}}>
+                  <span style={{background:"#dcfce7",color:C.accent,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>🤝 PR: {customers.filter(function(c){return (c.source||"PR")==="PR";}).length}</span>
+                  <span style={{background:"#dbeafe",color:"#1d4ed8",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>🌐 Online: {customers.filter(function(c){return c.source==="Online";}).length}</span>
+                </div>
+              </div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                 <input value={cs} onChange={function(e){setCs(e.target.value);}} placeholder="Search customers..."
                   style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 11px",fontSize:12,color:C.textBody,outline:"none",minWidth:140}}/>
+                <select onChange={function(e){setCs(e.target.value==="all"?"":e.target.value);}}
+                  style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 10px",fontSize:12,color:C.textBody,outline:"none"}}>
+                  <option value="all">All Sources</option>
+                  <option value="PR">🤝 PR Only</option>
+                  <option value="Online">🌐 Online Only</option>
+                </select>
                 <button onClick={function(){
                   var rows=fC.map(function(c,i){
                     return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+c.id+"</td><td style='font-weight:700'>"+c.name+"</td><td>"+c.phone+"</td><td>"+(c.email||"--")+"</td><td>"+(c.city||"--")+"</td><td style='font-family:monospace'>"+(c.passport||"--")+"</td><td>"+(c.reference||"--")+"</td><td>"+(c.notes||"--")+"</td></tr>";
@@ -1470,7 +1708,12 @@ export default function App(){
                   {fC.map(function(c,i){return(
                     <tr key={c.id} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
                       <td style={{padding:"8px 11px",color:C.muted,fontSize:10,fontWeight:600}}>{c.id}</td>
-                      <td style={{padding:"8px 11px",fontWeight:700}}>{c.name}</td>
+                      <td style={{padding:"8px 11px",fontWeight:700}}>
+                        {c.name}
+                        <span style={{marginLeft:6,background:c.source==="Online"?"#dbeafe":"#dcfce7",color:c.source==="Online"?"#1d4ed8":C.accent,padding:"1px 6px",borderRadius:20,fontSize:9,fontWeight:700}}>
+                          {c.source==="Online"?"🌐":"🤝"}{c.source||"PR"}
+                        </span>
+                      </td>
                       <td style={{padding:"8px 11px",fontSize:11}}>{c.phone}</td>
                       <td style={{padding:"8px 11px",fontSize:11,color:C.muted}}>{c.email}</td>
                       <td style={{padding:"8px 11px",fontSize:11}}>{c.city}</td>
@@ -1491,6 +1734,20 @@ export default function App(){
               </table>
             </div>
             {showCF&&(<Modal title="Add Customer" onClose={function(){setShowCF(false);}}>
+              {/* Source Toggle */}
+              <div style={{marginBottom:12}}>
+                <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:6,letterSpacing:.5,textTransform:"uppercase"}}>Customer Source</label>
+                <div style={{display:"flex",gap:0,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:9,overflow:"hidden",width:"fit-content"}}>
+                  <button onClick={function(){setCf(Object.assign({},cf,{source:"PR"}));}}
+                    style={{padding:"9px 20px",border:"none",background:cf.source==="PR"?C.accent:"transparent",color:cf.source==="PR"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",gap:5}}>
+                    🤝 PR (Personal Relation)
+                  </button>
+                  <button onClick={function(){setCf(Object.assign({},cf,{source:"Online"}));}}
+                    style={{padding:"9px 20px",border:"none",background:cf.source==="Online"?"#0284c7":"transparent",color:cf.source==="Online"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",gap:5}}>
+                    🌐 Online Marketing
+                  </button>
+                </div>
+              </div>
               <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
                 <Field label="Name"      value={cf.name}      onChange={function(v){setCf(Object.assign({},cf,{name:v}));}} half={true}/>
                 <Field label="Phone"     value={cf.phone}     onChange={function(v){setCf(Object.assign({},cf,{phone:v}));}} half={true}/>
@@ -1500,7 +1757,9 @@ export default function App(){
                 <Field label="Reference" value={cf.reference||""} onChange={function(v){setCf(Object.assign({},cf,{reference:v}));}} half={true}/>
                 <Field label="Notes"     value={cf.notes}     onChange={function(v){setCf(Object.assign({},cf,{notes:v}));}} half={true}/>
               </div>
-              <button onClick={addC} style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13,marginTop:2}}>Add</button>
+              <button onClick={addC} style={{width:"100%",background:cf.source==="Online"?"#0284c7":C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13,marginTop:2}}>
+                Add {cf.source==="Online"?"🌐 Online":"🤝 PR"} Customer
+              </button>
             </Modal>)}
           </div>
         )}
@@ -1626,6 +1885,7 @@ export default function App(){
           <PersonalExpenses personal={personal} setPersonal={setPersonal} fbStatus={fbStatus}/>
         )}
                 {tab==="marketing"&&<Marketing packages={packages} setPackages={setP} customers={customers} showToast={showToast}/>}
+        {tab==="queries"&&<QueriesTab queries={queries} setQueries={setQueries} currentUser={currentUser}/>}
       </div>
 
       {invB&&<InvoiceModal b={invB} onClose={function(){setInvB(null);}}/>}
@@ -1647,6 +1907,19 @@ export default function App(){
         <button onClick={function(){setB(bookings.map(function(b){return b.id===edB.id?Object.assign({},edB,{amount:Number(edB.amount),cost:Number(edB.cost||0),commission:Number(edB.commission||0)}):b;}));setEdB(null);}} style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13,marginTop:4}}>Save</button>
       </Modal>}
       {edC&&<Modal title="Edit Customer" onClose={function(){setEdC(null);}}>
+        <div style={{marginBottom:12}}>
+          <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:6,letterSpacing:.5,textTransform:"uppercase"}}>Customer Source</label>
+          <div style={{display:"flex",gap:0,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:9,overflow:"hidden",width:"fit-content"}}>
+            <button onClick={function(){setEdC(Object.assign({},edC,{source:"PR"}));}}
+              style={{padding:"8px 18px",border:"none",background:(edC.source||"PR")==="PR"?C.accent:"transparent",color:(edC.source||"PR")==="PR"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12}}>
+              🤝 PR
+            </button>
+            <button onClick={function(){setEdC(Object.assign({},edC,{source:"Online"}));}}
+              style={{padding:"8px 18px",border:"none",background:edC.source==="Online"?"#0284c7":"transparent",color:edC.source==="Online"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12}}>
+              🌐 Online
+            </button>
+          </div>
+        </div>
         <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
           <Field label="Name"      value={edC.name}      onChange={function(v){setEdC(Object.assign({},edC,{name:v}));}} half={true}/>
           <Field label="Phone"     value={edC.phone}     onChange={function(v){setEdC(Object.assign({},edC,{phone:v}));}} half={true}/>
@@ -1656,7 +1929,7 @@ export default function App(){
           <Field label="Reference" value={edC.reference||""} onChange={function(v){setEdC(Object.assign({},edC,{reference:v}));}} half={true}/>
           <Field label="Notes"     value={edC.notes}     onChange={function(v){setEdC(Object.assign({},edC,{notes:v}));}} half={true}/>
         </div>
-        <button onClick={function(){setC(customers.map(function(c){return c.id===edC.id?edC:c;}));setEdC(null);}} style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13,marginTop:4}}>Save</button>
+        <button onClick={function(){setC(customers.map(function(c){return c.id===edC.id?edC:c;}));setEdC(null);}} style={{width:"100%",background:edC.source==="Online"?"#0284c7":C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13,marginTop:4}}>Save</button>
       </Modal>}
       {edE&&<Modal title="Edit Expense" onClose={function(){setEdE(null);}}>
         <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
