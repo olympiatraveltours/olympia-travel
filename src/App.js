@@ -916,6 +916,7 @@ function PersonalExpenses(props){
   var [filterMo,setFilterMo]=useState(new Date().getMonth());
   var [filterYr,setFilterYr]=useState(new Date().getFullYear());
   var [showForm,setShowForm]=useState(false);
+  var [editExp,setEditExp]=useState(null);
   var [search,setSearch]=useState("");
 
   var emptyExp={id:"",desc:"",amount:"",category:"Food",date:new Date().toISOString().split("T")[0],section:"personal",notes:""};
@@ -926,10 +927,19 @@ function PersonalExpenses(props){
 
   function addExpense(){
     if(!form.desc||!form.amount)return;
-    var newExp=Object.assign({},form,{id:uid("PE"),amount:Number(form.amount),section:activeSection});
-    var newList=personal.concat([newExp]);setPersonal(newList);
+    if(editExp){
+      var updated=personal.map(function(e){
+        return e.id===editExp.id?Object.assign({},form,{id:editExp.id,amount:Number(form.amount)}):e;
+      });
+      setPersonal(updated);
+    } else {
+      var newExp=Object.assign({},form,{id:uid("PE"),amount:Number(form.amount),section:activeSection});
+      var newList=personal.concat([newExp]);
+      setPersonal(newList);
+    }
     setForm(Object.assign({},emptyExp,{section:activeSection}));
     setShowForm(false);
+    setEditExp(null);
   }
   function delExpense(id){var newList2=personal.filter(function(e){return e.id!==id;});setPersonal(newList2);}
 
@@ -1062,7 +1072,12 @@ function PersonalExpenses(props){
                 <td style={{padding:"9px 11px",color:C.red,fontWeight:800}}>{pkr(e.amount)}</td>
                 <td style={{padding:"9px 11px",fontSize:10,color:C.muted}}>{e.notes||"--"}</td>
                 <td style={{padding:"9px 11px"}}>
-                  <button onClick={function(){delExpense(e.id);}} style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Del</button>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={function(){setEditExp(e);setForm(Object.assign({},e));setShowForm(true);}}
+                      style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Edit</button>
+                    <button onClick={function(){delExpense(e.id);}}
+                      style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Del</button>
+                  </div>
                 </td>
               </tr>
             );})}
@@ -1073,7 +1088,7 @@ function PersonalExpenses(props){
 
       {/* Add Form Modal */}
       {showForm&&(
-        <Modal title={"Add "+(activeSection==="personal"?"Personal":"Family")+" Expense"} onClose={function(){setShowForm(false);}}>
+        <Modal title={(editExp?"Edit ":"Add ")+(activeSection==="personal"?"Personal":"Family")+" Expense"} onClose={function(){setShowForm(false);setEditExp(null);}}>
           <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
             <Field label="Description" value={form.desc} onChange={function(v){setForm(Object.assign({},form,{desc:v}));}}/>
             <Field label="Category" value={form.category} onChange={function(v){setForm(Object.assign({},form,{category:v}));}}
@@ -1083,7 +1098,7 @@ function PersonalExpenses(props){
             <Field label="Notes (optional)" value={form.notes||""} onChange={function(v){setForm(Object.assign({},form,{notes:v}));}} half={true}/>
           </div>
           <button onClick={addExpense} style={{width:"100%",background:activeSection==="personal"?C.accent:C.gold,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14,marginTop:4}}>
-            + Add Expense
+            {editExp?"💾 Save Changes":"+ Add Expense"}
           </button>
         </Modal>
       )}
@@ -1091,6 +1106,295 @@ function PersonalExpenses(props){
   );
 }
 
+
+
+// ─── GROUPS TAB ─────────────────────────────────────────────
+function GroupsTab(props){
+  var groups=Array.isArray(props.groups)?props.groups:[];
+  var setGroups=props.setGroups;
+  var customers=props.customers||[];
+
+  var emptyGroup={id:"",name:"",destination:"",date:"",departDate:"",returnDate:"",
+    totalSeats:0,bookedSeats:0,pricePerPerson:0,status:"Active",notes:"",
+    members:[],expenses:[]};
+
+  var [showForm,setShowForm]=useState(false);
+  var [editG,setEditG]=useState(null);
+  var [viewG,setViewG]=useState(null);
+
+  function saveG(g){
+    var updated=editG?groups.map(function(x){return x.id===g.id?g:x;}):groups.concat([g]);
+    setGroups(updated);setShowForm(false);setEditG(null);
+  }
+  function delG(id){if(window.confirm("Delete this group?"))setGroups(groups.filter(function(x){return x.id!==id;}));}
+
+  var statusColors={Active:{bg:"#dcfce7",c:"#15803d"},Completed:{bg:"#dbeafe",c:"#1d4ed8"},Cancelled:{bg:"#fee2e2",c:"#b91c1c"},Upcoming:{bg:"#fef9c3",c:"#a16207"}};
+
+  function GroupForm(fp){
+    var [f,setF]=useState(fp.g?Object.assign({},fp.g):emptyGroup);
+    var [mName,setMName]=useState("");
+    var [mPhone,setMPhone]=useState("");
+    var [mPassport,setMPassport]=useState("");
+    var [mVisaStatus,setMVisaStatus]=useState("Pending");
+    var [mPaid,setMPaid]=useState("Unpaid");
+    var [eDesc,setEDesc]=useState("");
+    var [eAmt,setEAmt]=useState("");
+
+    var members=Array.isArray(f.members)?f.members:[];
+    var expenses=Array.isArray(f.expenses)?f.expenses:[];
+    var totalRevenue=members.length*Number(f.pricePerPerson||0);
+    var totalExpenses=expenses.reduce(function(s,e){return s+Number(e.amount||0);},0);
+    var totalPaid=members.filter(function(m){return m.paid==="Paid";}).length*Number(f.pricePerPerson||0);
+    var totalUnpaid=totalRevenue-totalPaid;
+    var netProfit=totalRevenue-totalExpenses;
+    var approvedVisa=members.filter(function(m){return m.visaStatus==="Approved";}).length;
+    var refusedVisa=members.filter(function(m){return m.visaStatus==="Refused";}).length;
+
+    function addMember(){
+      if(!mName)return;
+      setF(Object.assign({},f,{members:members.concat([{name:mName,phone:mPhone,passport:mPassport,visaStatus:mVisaStatus,paid:mPaid}])}));
+      setMName("");setMPhone("");setMPassport("");setMVisaStatus("Pending");setMPaid("Unpaid");
+    }
+    function removeMember(i){setF(Object.assign({},f,{members:members.filter(function(_,j){return j!==i;})}));}
+    function updateMember(i,field,val){
+      var newM=members.map(function(m,j){return j===i?Object.assign({},m,{[field]:val}):m;});
+      setF(Object.assign({},f,{members:newM}));
+    }
+    function addExpense(){
+      if(!eDesc||!eAmt)return;
+      setF(Object.assign({},f,{expenses:expenses.concat([{desc:eDesc,amount:Number(eAmt)}])}));
+      setEDesc("");setEAmt("");
+    }
+
+    return(
+      <Modal title={fp.isNew?"New Group":"Edit Group"} onClose={fp.onClose} wide={true}>
+        <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
+          <Field label="Group Name" value={f.name} onChange={function(v){setF(Object.assign({},f,{name:v}));}} half={true}/>
+          <Field label="Destination" value={f.destination} onChange={function(v){setF(Object.assign({},f,{destination:v}));}} half={true}/>
+          <Field label="Depart Date" value={f.departDate} onChange={function(v){setF(Object.assign({},f,{departDate:v}));}} type="date" half={true}/>
+          <Field label="Return Date" value={f.returnDate} onChange={function(v){setF(Object.assign({},f,{returnDate:v}));}} type="date" half={true}/>
+          <Field label="Price Per Person (PKR)" value={f.pricePerPerson} onChange={function(v){setF(Object.assign({},f,{pricePerPerson:v}));}} type="number" half={true}/>
+          <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Active","Upcoming","Completed","Cancelled"]} half={true}/>
+          <Field label="Notes" value={f.notes} onChange={function(v){setF(Object.assign({},f,{notes:v}));}} half={true}/>
+        </div>
+
+        {/* Summary cards */}
+        <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+          {[
+            ["Members",members.length,C.accent,C.accentSoft],
+            ["Total Revenue",pkr(totalRevenue),C.accent,"#f0fdf4"],
+            ["Total Paid",pkr(totalPaid),C.accent,"#dcfce7"],
+            ["Unpaid",pkr(totalUnpaid),C.red,"#fee2e2"],
+            ["Expenses",pkr(totalExpenses),C.gold,"#fffbeb"],
+            ["Net Profit",pkr(netProfit),netProfit>=0?C.gold:C.red,netProfit>=0?"#fffbeb":"#fee2e2"],
+            ["Visa OK",approvedVisa+"/"+(approvedVisa+refusedVisa),C.accent,"#dcfce7"],
+          ].map(function(s){return(
+            <div key={s[0]} style={{flex:1,minWidth:90,background:s[3],border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",textAlign:"center"}}>
+              <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{s[0]}</div>
+              <div style={{color:s[2],fontWeight:900,fontSize:14}}>{s[1]}</div>
+            </div>
+          );})}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+          {/* Add member */}
+          <div style={{background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:12,padding:14}}>
+            <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:10}}>👥 Add Member</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
+              <input value={mName} onChange={function(e){setMName(e.target.value);}} placeholder="Full Name *"
+                style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+              <div style={{display:"flex",gap:6}}>
+                <input value={mPhone} onChange={function(e){setMPhone(e.target.value);}} placeholder="Phone"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+                <input value={mPassport} onChange={function(e){setMPassport(e.target.value);}} placeholder="Passport No."
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <select value={mVisaStatus} onChange={function(e){setMVisaStatus(e.target.value);}}
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}>
+                  <option>Pending</option><option>Applied</option><option>Approved</option><option>Refused</option>
+                </select>
+                <select value={mPaid} onChange={function(e){setMPaid(e.target.value);}}
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}>
+                  <option>Unpaid</option><option>Paid</option><option>Partial</option>
+                </select>
+              </div>
+              <button onClick={addMember} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"8px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>+ Add Member</button>
+            </div>
+          </div>
+
+          {/* Add expense */}
+          <div style={{background:"#fef9f0",border:"1.5px solid #fde68a",borderRadius:12,padding:14}}>
+            <div style={{fontWeight:800,color:C.gold,fontSize:12,marginBottom:10}}>💸 Group Expenses</div>
+            <div style={{display:"flex",gap:6,marginBottom:8}}>
+              <input value={eDesc} onChange={function(e){setEDesc(e.target.value);}} placeholder="Description"
+                style={{flex:2,background:"#fff",border:"1.5px solid #fde68a",borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+              <input value={eAmt} onChange={function(e){setEAmt(e.target.value);}} placeholder="Amount" type="number"
+                style={{flex:1,background:"#fff",border:"1.5px solid #fde68a",borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+              <button onClick={addExpense} style={{background:C.gold,color:"#fff",border:"none",borderRadius:7,padding:"7px 10px",cursor:"pointer",fontWeight:700}}>+</button>
+            </div>
+            {expenses.map(function(e,i){return(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #fde68a",fontSize:12}}>
+                <span>{e.desc}</span>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{color:C.red,fontWeight:700}}>{pkr(e.amount)}</span>
+                  <button onClick={function(){setF(Object.assign({},f,{expenses:expenses.filter(function(_,j){return j!==i;})}));}}
+                    style={{background:C.redBg,border:"none",color:C.red,borderRadius:4,padding:"1px 6px",cursor:"pointer",fontSize:10}}>x</button>
+                </div>
+              </div>
+            );})}
+            <div style={{display:"flex",justifyContent:"space-between",fontWeight:800,color:C.red,marginTop:8,fontSize:12}}>
+              <span>Total</span><span>{pkr(totalExpenses)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Members table */}
+        {members.length>0&&(
+          <div style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:12,overflow:"auto",marginBottom:14}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:600}}>
+              <thead><tr style={{background:C.accentSoft}}>
+                {["#","Name","Phone","Passport","Visa Status","Payment",""].map(function(h){return <th key={h} style={{padding:"8px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;})}
+              </tr></thead>
+              <tbody>
+                {members.map(function(m,i){return(
+                  <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
+                    <td style={{padding:"7px 10px",color:C.muted,fontSize:11}}>{i+1}</td>
+                    <td style={{padding:"7px 10px",fontWeight:700}}>{m.name}</td>
+                    <td style={{padding:"7px 10px",fontSize:11}}>{m.phone||"--"}</td>
+                    <td style={{padding:"7px 10px",fontSize:11,fontFamily:"monospace"}}>{m.passport||"--"}</td>
+                    <td style={{padding:"7px 10px"}}>
+                      <select value={m.visaStatus||"Pending"} onChange={function(e){updateMember(i,"visaStatus",e.target.value);}}
+                        style={{background:m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3",border:"none",borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:m.visaStatus==="Approved"?C.accent:m.visaStatus==="Refused"?C.red:"#a16207",outline:"none",cursor:"pointer"}}>
+                        <option>Pending</option><option>Applied</option><option>Approved</option><option>Refused</option>
+                      </select>
+                    </td>
+                    <td style={{padding:"7px 10px"}}>
+                      <select value={m.paid||"Unpaid"} onChange={function(e){updateMember(i,"paid",e.target.value);}}
+                        style={{background:m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2",border:"none",borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:m.paid==="Paid"?C.accent:m.paid==="Partial"?"#a16207":C.red,outline:"none",cursor:"pointer"}}>
+                        <option>Unpaid</option><option>Partial</option><option>Paid</option>
+                      </select>
+                    </td>
+                    <td style={{padding:"7px 10px"}}>
+                      <button onClick={function(){removeMember(i);}} style={{background:C.redBg,border:"none",color:C.red,borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10}}>x</button>
+                    </td>
+                  </tr>
+                );})}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <button onClick={function(){fp.onSave(Object.assign({},f,{id:f.id||uid("GRP")}));}}
+          style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"12px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
+          Save Group
+        </button>
+      </Modal>
+    );
+  }
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Group Tours & Visas</h2>
+        <button onClick={function(){setEditG(null);setShowForm(true);}}
+          style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>+ New Group</button>
+      </div>
+
+      {/* Summary stats */}
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        {[["Total Groups",groups.length,C.accent],["Active",groups.filter(function(g){return g.status==="Active";}).length,"#1d4ed8"],["Completed",groups.filter(function(g){return g.status==="Completed";}).length,C.accent],["Total Members",groups.reduce(function(s,g){return s+(Array.isArray(g.members)?g.members.length:0);},0),"#7c3aed"]].map(function(s){return(
+          <div key={s[0]} style={{flex:1,minWidth:100,background:"#fff",border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 14px",textAlign:"center",boxShadow:C.shadow}}>
+            <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{s[0]}</div>
+            <div style={{color:s[2],fontWeight:900,fontSize:20}}>{s[1]}</div>
+          </div>
+        );})}
+      </div>
+
+      {/* Groups cards */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+        {groups.map(function(g){
+          var sc=statusColors[g.status]||{bg:"#f1f5f9",c:"#475569"};
+          var mems=Array.isArray(g.members)?g.members:[];
+          var exps=Array.isArray(g.expenses)?g.expenses:[];
+          var rev=mems.length*Number(g.pricePerPerson||0);
+          var exp=exps.reduce(function(s,e){return s+Number(e.amount||0);},0);
+          var approved=mems.filter(function(m){return m.visaStatus==="Approved";}).length;
+          var paid=mems.filter(function(m){return m.paid==="Paid";}).length;
+          return(
+            <div key={g.id} style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:14,padding:16,boxShadow:C.shadow}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                <div>
+                  <div style={{fontWeight:800,fontSize:15}}>{g.name}</div>
+                  <div style={{color:C.muted,fontSize:11,marginTop:2}}>✈️ {g.destination}</div>
+                  {g.departDate&&<div style={{color:C.muted,fontSize:10}}>🗓 {g.departDate}{g.returnDate?" → "+g.returnDate:""}</div>}
+                </div>
+                <span style={{background:sc.bg,color:sc.c,padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700}}>{g.status}</span>
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+                <span style={{background:C.accentSoft,color:C.accent,padding:"3px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>👥 {mems.length} members</span>
+                <span style={{background:"#dcfce7",color:C.accent,padding:"3px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>✅ Visa: {approved}/{mems.length}</span>
+                <span style={{background:"#dbeafe",color:"#1d4ed8",padding:"3px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>💰 Paid: {paid}/{mems.length}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:10,padding:"8px 0",borderTop:"1px solid "+C.border}}>
+                <span style={{color:C.muted}}>Revenue: <b style={{color:C.accent}}>{pkr(rev)}</b></span>
+                <span style={{color:C.muted}}>Expenses: <b style={{color:C.red}}>{pkr(exp)}</b></span>
+                <span style={{color:C.muted}}>Profit: <b style={{color:(rev-exp)>=0?C.gold:C.red}}>{pkr(rev-exp)}</b></span>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={function(){setViewG(g);}} style={{flex:1,background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>View</button>
+                <button onClick={function(){setEditG(g);setShowForm(true);}} style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Edit</button>
+                <button onClick={function(){delG(g.id);}} style={{flex:1,background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Del</button>
+              </div>
+            </div>
+          );
+        })}
+        {groups.length===0&&<div style={{gridColumn:"1/-1",padding:"30px 0",textAlign:"center",color:C.muted}}>Koi group nahi — + New Group se add karein</div>}
+      </div>
+
+      {showForm&&<GroupForm g={editG} isNew={!editG} onSave={saveG} onClose={function(){setShowForm(false);setEditG(null);}}/>}
+      {viewG&&(
+        <Modal title={"Group: "+viewG.name} onClose={function(){setViewG(null);}} wide={true}>
+          <div style={{marginBottom:10,display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["Destination",viewG.destination||"--"],["Depart",viewG.departDate||"--"],["Return",viewG.returnDate||"--"],["Status",viewG.status],["Price/Person",pkr(viewG.pricePerPerson||0)]].map(function(r){return(
+              <div key={r[0]} style={{background:C.accentSoft,borderRadius:8,padding:"6px 12px",fontSize:12}}>
+                <div style={{color:C.muted,fontSize:9,fontWeight:700}}>{r[0]}</div>
+                <div style={{fontWeight:700}}>{r[1]}</div>
+              </div>
+            );})}
+          </div>
+          <div style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:12,overflow:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:500}}>
+              <thead><tr style={{background:C.accentSoft}}>
+                {["#","Name","Phone","Passport","Visa","Payment"].map(function(h){return <th key={h} style={{padding:"8px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;})}
+              </tr></thead>
+              <tbody>
+                {(Array.isArray(viewG.members)?viewG.members:[]).map(function(m,i){return(
+                  <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
+                    <td style={{padding:"7px 10px",color:C.muted}}>{i+1}</td>
+                    <td style={{padding:"7px 10px",fontWeight:700}}>{m.name}</td>
+                    <td style={{padding:"7px 10px",fontSize:11}}>{m.phone||"--"}</td>
+                    <td style={{padding:"7px 10px",fontSize:11,fontFamily:"monospace"}}>{m.passport||"--"}</td>
+                    <td style={{padding:"7px 10px"}}>
+                      <span style={{background:m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3",color:m.visaStatus==="Approved"?C.accent:m.visaStatus==="Refused"?C.red:"#a16207",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{m.visaStatus||"Pending"}</span>
+                    </td>
+                    <td style={{padding:"7px 10px"}}>
+                      <span style={{background:m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2",color:m.paid==="Paid"?C.accent:m.paid==="Partial"?"#a16207":C.red,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{m.paid||"Unpaid"}</span>
+                    </td>
+                  </tr>
+                );})}
+              </tbody>
+            </table>
+          </div>
+          <button onClick={function(){setEditG(viewG);setShowForm(true);setViewG(null);}}
+            style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13,marginTop:12}}>
+            ✏️ Edit Group
+          </button>
+        </Modal>
+      )}
+    </div>
+  );
+}
 
 // ─── QUERIES TAB ─────────────────────────────────────────────
 function QueriesTab(props){
@@ -1254,6 +1558,7 @@ export default function App(){
     return Array.isArray(d)?d:[];
   });
   var [personal,setPersonalR]=useState(function(){return ld("olympia_personal",[]);});
+  var [groups,setGroupsR]=useState(function(){var d=ld("olympia_groups",[]); return Array.isArray(d)?d:[];});
   var [queries,setQueriesR]=useState(function(){
     var d=ld("olympia_queries",[]);
     return Array.isArray(d)?d:[];
@@ -1302,6 +1607,7 @@ export default function App(){
         {fb:"olympia_cases",     setter:setCasesR,    lk:"olympia_cases",     getter:function(){return ld("olympia_cases",SPARTNER);}},
         {fb:"olympia_personal",  setter:setPersonalR, lk:"olympia_personal",  getter:function(){return ld("olympia_personal",[]);}},
         {fb:"olympia_queries",   setter:setQueriesR,  lk:"olympia_queries",   getter:function(){return ld("olympia_queries",[]);}},
+        {fb:"olympia_groups",    setter:setGroupsR,   lk:"olympia_groups",    getter:function(){return ld("olympia_groups",[]);}},
       ];
 
       keys.forEach(function(kv){
@@ -1333,6 +1639,10 @@ export default function App(){
     var arr=Array.isArray(d)?d:[];
     setQueriesR(arr);sv("olympia_queries",arr);fbSave("olympia_queries",arr);showToast();
   }
+  function setGroups(d){
+    var arr=Array.isArray(d)?d:[];
+    setGroupsR(arr);sv("olympia_groups",arr);fbSave("olympia_groups",arr);showToast();
+  }
   function setPersonal(d){
     setPersonalR(d);
     sv("olympia_personal",d);
@@ -1351,7 +1661,7 @@ export default function App(){
   var [bMo,setBMo]=useState(new Date().getMonth());
   var [bYr,setBYr]=useState(new Date().getFullYear());
 
-  var eb={customer:"",destination:"",date:"",amount:"",cost:"",commission:"",status:"Pending",type:"Flight Only",account:"Bank Alfalah",notes:"",reference:""};
+  var eb={customer:"",destination:"",date:"",amount:"",cost:"",commission:"",status:"Pending",workStatus:"In Process",visaStatus:"",type:"Flight Only",account:"Bank Alfalah",notes:"",reference:""};
   var [showBF,setShowBF]=useState(false);var [bf,setBf]=useState(eb);
   var ec={name:"",phone:"",email:"",city:"",passport:"",notes:"",reference:"",source:"PR"};
   var [showCF,setShowCF]=useState(false);var [cf,setCf]=useState(ec);
@@ -1376,15 +1686,42 @@ export default function App(){
       return d.getMonth()===eMo&&d.getFullYear()===eYr;
     });
   },[fE,eMode,eMo,eYr]);
+  var [bStatusFilter,setBStatusFilter]=useState("all");
+  var [bPayFilter,setBPayFilter]=useState("all");
+  var [bSortDir,setBSortDir]=useState("smart");
   var fBFiltered=useMemo(function(){
     return fB.filter(function(b){
-      if(bMode==="all")return true;
-      if(!b.date)return false;
-      var d=new Date(b.date);
-      if(bMode==="year")return d.getFullYear()===bYr;
-      return d.getMonth()===bMo&&d.getFullYear()===bYr;
+      if(bMode!=="all"){
+        if(!b.date)return false;
+        var d=new Date(b.date);
+        if(bMode==="year"&&d.getFullYear()!==bYr)return false;
+        if(bMode==="month"&&!(d.getMonth()===bMo&&d.getFullYear()===bYr))return false;
+      }
+      if(bPayFilter==="paid"&&b.status!=="Paid")return false;
+      if(bPayFilter==="unpaid"&&b.status==="Paid")return false;
+      if(bStatusFilter==="In Process"&&(b.workStatus||"In Process")!=="In Process")return false;
+      if(bStatusFilter==="Closed"&&b.workStatus!=="Closed")return false;
+      return true;
+    }).sort(function(a,b2){
+      if(bSortDir==="smart"){
+        // Priority score: lower = top
+        function score(b){
+          var isPaid=b.status==="Paid";
+          var isClosed=(b.workStatus||"In Process")==="Closed";
+          if(!isPaid&&!isClosed) return 0; // Active unpaid+inprocess = TOP
+          if(!isPaid&&isClosed)  return 1; // Unpaid but closed
+          if(isPaid&&!isClosed)  return 2; // Paid but still in process
+          return 3;                         // Paid + Closed = BOTTOM
+        }
+        var sa=score(a), sb=score(b2);
+        if(sa!==sb) return sa-sb;
+        // Within same group: newest first
+        return new Date(b2.date||0)-new Date(a.date||0);
+      }
+      var da=new Date(a.date||0), db=new Date(b2.date||0);
+      return bSortDir==="desc"?db-da:da-db;
     });
-  },[fB,bMode,bMo,bYr]);
+  },[fB,bMode,bMo,bYr,bStatusFilter,bPayFilter,bSortDir]);
 
   function addB(){
     if(!bf.customer||!bf.destination||!bf.amount)return;
@@ -1402,6 +1739,7 @@ export default function App(){
     {id:"dashboard",l:"Dashboard"},{id:"bookings",l:"Bookings"},
     {id:"customers",l:"Customers"},{id:"expenses",l:"Expenses"},
     {id:"reports",l:"Reports"},{id:"partners",l:"Partners"},
+    {id:"groups",l:"Groups"},
     {id:"personal",l:"My Expenses"},{id:"marketing",l:"Marketing"},
     {id:"queries",l:"Queries"},
   ];
@@ -1580,7 +1918,7 @@ export default function App(){
               </div>
             </div>
             {/* Booking filter bar */}
-            <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
               <div style={{display:"flex",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
                 {["all","month","year"].map(function(m){return(
                   <button key={m} onClick={function(){setBMode(m);}} style={{padding:"6px 11px",border:"none",background:bMode===m?C.accent:"transparent",color:bMode===m?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11,textTransform:"capitalize"}}>{m==="all"?"All":m==="month"?"Monthly":"Yearly"}</button>
@@ -1592,6 +1930,15 @@ export default function App(){
               {bMode!=="all"&&<select value={bYr} onChange={function(e){setBYr(Number(e.target.value));}} style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 9px",fontSize:12,outline:"none"}}>
                 {[2023,2024,2025,2026,2027].map(function(y){return <option key={y}>{y}</option>;})}
               </select>}
+              {/* Sort options */}
+              <div style={{display:"flex",gap:0,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+                {[["smart","🔼 Smart"],["desc","📅 Newest"],["asc","📅 Oldest"]].map(function(s){return(
+                  <button key={s[0]} onClick={function(){setBSortDir(s[0]);}}
+                    style={{padding:"6px 10px",border:"none",background:bSortDir===s[0]?C.accent:"transparent",color:bSortDir===s[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:10}}>
+                    {s[1]}
+                  </button>
+                );})}
+              </div>
               <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
                 <span style={{color:C.muted,fontSize:11}}>{fBFiltered.length} bookings | {pkr(fBFiltered.reduce(function(s,b){return s+Number(b.amount);},0))}</span>
                 <button onClick={function(){
@@ -1612,12 +1959,45 @@ export default function App(){
                 }} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontWeight:800,cursor:"pointer",fontSize:11}}>🖨️ Print</button>
               </div>
             </div>
+            {/* Payment + Work Status filters */}
+            <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+              {/* Payment filter */}
+              <div style={{display:"flex",gap:0,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+                {[["all","All"],["paid","✅ Paid"],["unpaid","⏳ Unpaid"]].map(function(f){return(
+                  <button key={f[0]} onClick={function(){setBPayFilter(f[0]);}}
+                    style={{padding:"6px 12px",border:"none",background:bPayFilter===f[0]?(f[0]==="paid"?C.accent:f[0]==="unpaid"?"#dc2626":C.accent):"transparent",color:bPayFilter===f[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+                    {f[1]}
+                  </button>
+                );})}
+              </div>
+              {/* Work status filter */}
+              <div style={{display:"flex",gap:0,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+                {[["all","All"],["In Process","🔄 In Process"],["Closed","✔ Closed"]].map(function(fl){return(
+                  <button key={fl[0]} onClick={function(){setBStatusFilter(fl[0]);}}
+                    style={{padding:"6px 11px",border:"none",background:bStatusFilter===fl[0]?C.accent:"transparent",color:bStatusFilter===fl[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+                    {fl[1]}
+                  </button>
+                );})}
+              </div>
+              {/* Visa status filter */}
+              <div style={{display:"flex",gap:0,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+                <button onClick={function(){setBStatusFilter("all");setBPayFilter("all");}} style={{padding:"6px 12px",border:"none",background:"transparent",color:C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>Clear All</button>
+              </div>
+              {/* Stats */}
+              <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
+                <span style={{background:"#dcfce7",color:C.accent,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>✅ Paid: {fB.filter(function(b){return b.status==="Paid";}).length}</span>
+                <span style={{background:"#fef9c3",color:"#a16207",padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>⏳ Unpaid: {fB.filter(function(b){return b.status!=="Paid";}).length}</span>
+                <span style={{background:"#dbeafe",color:"#1d4ed8",padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>🔄 In Process: {fB.filter(function(b){return b.workStatus==="In Process";}).length}</span>
+                <span style={{background:"#f0fdf4",color:C.accent,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>✔ Closed: {fB.filter(function(b){return b.workStatus==="Closed";}).length}</span>
+              </div>
+            </div>
+
             <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:14,overflow:"auto",boxShadow:C.shadow}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:800}}>
-                <Th cols={["ID","Customer","Destination","Type","Date","Sale","Cost","Comm.","Profit","Account","Status","Actions"]}/>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:900}}>
+                <Th cols={["ID","Customer","Destination","Type","Date","Sale","Cost","Profit","Account","Payment","Work Status","Visa","Actions"]}/>
                 <tbody>
                   {fBFiltered.map(function(b,i){var p=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);return(
-                    <tr key={b.id} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
+                    <tr key={b.id} style={{borderTop:"1px solid "+C.border,background:b.status==="Paid"&&b.workStatus==="Closed"?"#f8f8f8":i%2===0?"#fff":"#fafffe",opacity:b.status==="Paid"&&b.workStatus==="Closed"?0.65:1}}>
                       <td style={{padding:"8px 11px",color:C.muted,fontSize:10,fontWeight:600}}>{b.id}</td>
                       <td style={{padding:"8px 11px",fontWeight:700}}>{b.customer}</td>
                       <td style={{padding:"8px 11px"}}>{b.destination}</td>
@@ -1625,10 +2005,28 @@ export default function App(){
                       <td style={{padding:"8px 11px",color:C.muted,fontSize:11}}>{b.date}</td>
                       <td style={{padding:"8px 11px",color:C.accent,fontWeight:800}}>{pkr(b.amount)}</td>
                       <td style={{padding:"8px 11px",color:C.red,fontSize:11}}>{pkr(b.cost||0)}</td>
-                      <td style={{padding:"8px 11px",color:C.red,fontSize:11}}>{pkr(b.commission||0)}</td>
                       <td style={{padding:"8px 11px",color:p>=0?C.gold:C.red,fontWeight:700}}>{pkr(p)}</td>
                       <td style={{padding:"8px 11px",fontSize:10,color:C.muted}}>{b.account||"--"}</td>
                       <td style={{padding:"8px 11px"}}><Badge status={b.status}/></td>
+                      <td style={{padding:"8px 11px"}}>
+                        <select value={b.workStatus||"In Process"} onChange={function(e){
+                          setB(bookings.map(function(x){return x.id===b.id?Object.assign({},x,{workStatus:e.target.value}):x;}));
+                        }} style={{background:b.workStatus==="Closed"?"#dcfce7":"#eff6ff",border:"1px solid "+(b.workStatus==="Closed"?C.border:"#bfdbfe"),borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:b.workStatus==="Closed"?C.accent:"#1d4ed8",outline:"none",cursor:"pointer"}}>
+                          <option>In Process</option>
+                          <option>Closed</option>
+                        </select>
+                      </td>
+                      <td style={{padding:"8px 11px"}}>
+                        <select value={b.visaStatus||""} onChange={function(e){
+                          setB(bookings.map(function(x){return x.id===b.id?Object.assign({},x,{visaStatus:e.target.value}):x;}));
+                        }} style={{background:b.visaStatus==="Approved"?"#dcfce7":b.visaStatus==="Refused"?"#fee2e2":"#f9fafb",border:"1px solid "+(b.visaStatus==="Approved"?C.border:b.visaStatus==="Refused"?"#fecaca":"#e5e7eb"),borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:b.visaStatus==="Approved"?C.accent:b.visaStatus==="Refused"?C.red:C.muted,outline:"none",cursor:"pointer"}}>
+                          <option value="">Visa Status</option>
+                          <option>Approved</option>
+                          <option>Refused</option>
+                          <option>Pending</option>
+                          <option>Applied</option>
+                        </select>
+                      </td>
                       <td style={{padding:"8px 11px"}}>
                         <div style={{display:"flex",gap:3}}>
                           <button onClick={function(){setInvB(b);}} style={{background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:5,padding:"3px 6px",cursor:"pointer",fontSize:10,fontWeight:700}}>Inv</button>
@@ -1648,7 +2046,9 @@ export default function App(){
                 <CustomerAutoInput value={bf.customer} onChange={function(v){setBf(Object.assign({},bf,{customer:v}));}} onSelect={onCustSelect} customers={customers}/>
                 <Field label="Destination"  value={bf.destination} onChange={function(v){setBf(Object.assign({},bf,{destination:v}));}} half={true}/>
                 <Field label="Package"      value={bf.type}        onChange={function(v){setBf(Object.assign({},bf,{type:v}));}} options={["Flight Only","Hotel Only","Flight + Hotel","Tour Package","Visa Only","Visa + Flight","Umrah Package","Hajj Package","Other"]} half={true}/>
-                <Field label="Status"       value={bf.status}      onChange={function(v){setBf(Object.assign({},bf,{status:v}));}} options={["Paid","Pending","Cancelled"]} half={true}/>
+                <Field label="Payment"      value={bf.status}      onChange={function(v){setBf(Object.assign({},bf,{status:v}));}} options={["Paid","Pending","Cancelled"]} half={true}/>
+                <Field label="Work Status" value={bf.workStatus||"In Process"} onChange={function(v){setBf(Object.assign({},bf,{workStatus:v}));}} options={["In Process","Closed"]} half={true}/>
+                <Field label="Visa Status" value={bf.visaStatus||""} onChange={function(v){setBf(Object.assign({},bf,{visaStatus:v}));}} options={["","Pending","Applied","Approved","Refused"]} half={true}/>
                 <Field label="Date"         value={bf.date}        onChange={function(v){setBf(Object.assign({},bf,{date:v}));}} type="date" half={true}/>
                 <Field label="Sale Amount"  value={bf.amount}      onChange={function(v){setBf(Object.assign({},bf,{amount:v}));}} type="number" half={true}/>
                 <Field label="Cost/Purchase"value={bf.cost}        onChange={function(v){setBf(Object.assign({},bf,{cost:v}));}} type="number" half={true}/>
@@ -1886,6 +2286,7 @@ export default function App(){
         )}
                 {tab==="marketing"&&<Marketing packages={packages} setPackages={setP} customers={customers} showToast={showToast}/>}
         {tab==="queries"&&<QueriesTab queries={queries} setQueries={setQueries} currentUser={currentUser}/>}
+        {tab==="groups"&&<GroupsTab groups={groups} setGroups={setGroups} customers={customers}/>}
       </div>
 
       {invB&&<InvoiceModal b={invB} onClose={function(){setInvB(null);}}/>}
@@ -1895,7 +2296,9 @@ export default function App(){
           <Field label="Customer"    value={edB.customer}    onChange={function(v){setEdB(Object.assign({},edB,{customer:v}));}} half={true}/>
           <Field label="Destination" value={edB.destination} onChange={function(v){setEdB(Object.assign({},edB,{destination:v}));}} half={true}/>
           <Field label="Package"     value={edB.type}        onChange={function(v){setEdB(Object.assign({},edB,{type:v}));}} options={["Flight Only","Hotel Only","Flight + Hotel","Tour Package","Visa Only","Visa + Flight","Umrah Package","Hajj Package","Other"]} half={true}/>
-          <Field label="Status"      value={edB.status}      onChange={function(v){setEdB(Object.assign({},edB,{status:v}));}} options={["Paid","Pending","Cancelled"]} half={true}/>
+          <Field label="Payment"     value={edB.status}      onChange={function(v){setEdB(Object.assign({},edB,{status:v}));}} options={["Paid","Pending","Cancelled"]} half={true}/>
+          <Field label="Work Status" value={edB.workStatus||"In Process"} onChange={function(v){setEdB(Object.assign({},edB,{workStatus:v}));}} options={["In Process","Closed"]} half={true}/>
+          <Field label="Visa Status" value={edB.visaStatus||""} onChange={function(v){setEdB(Object.assign({},edB,{visaStatus:v}));}} options={["","Pending","Applied","Approved","Refused"]} half={true}/>
           <Field label="Date"        value={edB.date}        onChange={function(v){setEdB(Object.assign({},edB,{date:v}));}} type="date" half={true}/>
           <Field label="Sale Amount" value={edB.amount}      onChange={function(v){setEdB(Object.assign({},edB,{amount:v}));}} type="number" half={true}/>
           <Field label="Cost/Purchase" value={edB.cost||""}  onChange={function(v){setEdB(Object.assign({},edB,{cost:v}));}} type="number" half={true}/>
