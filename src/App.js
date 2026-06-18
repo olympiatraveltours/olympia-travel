@@ -39,6 +39,9 @@ function initFirebase(config, onReady){
     var s2=document.createElement("script");
     s2.src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js";
     s2.onload=function(){
+      var s3=document.createElement("script");
+      s3.src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js";
+      s3.onload=function(){
       try{
         var fb=window.firebase;
         if(!fb){console.log("Firebase not available");return;}
@@ -48,8 +51,17 @@ function initFirebase(config, onReady){
         _saveQueue.forEach(function(q){_db.ref(q.p).set(q.d);});
         _saveQueue=[];
         console.log("Firebase ready!");
-        if(onReady) onReady();
+        // Anonymous sign-in for secure rules
+        app.auth().signInAnonymously().then(function(){
+          console.log("Signed in anonymously!");
+          if(onReady) onReady();
+        }).catch(function(e){
+          console.log("Auth error:",e);
+          if(onReady) onReady();
+        });
       }catch(e){console.log("Firebase init error:",e);}
+      };
+      document.head.appendChild(s3);
     };
     document.head.appendChild(s2);
   };
@@ -242,7 +254,12 @@ function buildInvoiceHTML(b, isAllTime, allBookings){
       +(b.reference?"<div class='row'><span class='lbl'>Reference</span><span class='val'>"+b.reference+"</span></div>":"")
       +(b.notes?"<div class='row'><span class='lbl'>Notes</span><span class='val'>"+b.notes+"</span></div>":"")
       +"</div>"
-      +"<div class='sec'><div class='row'><span class='lbl'>Total Amount</span><span class='val' style='font-weight:900;color:#16a34a'>"+pkr(b.amount)+"</span></div>"
+      +(b.description?"<div class='sec'><div class='row'><span class='lbl'>Description</span><span class='val'>"+b.description+"</span></div></div>":"")
+      +"<div class='sec'>"
+      +"<div class='row'><span class='lbl'>Service Amount</span><span class='val' style='font-weight:900;color:#16a34a'>"+pkr(b.amount)+"</span></div>"
+      +(b.paidAmount&&Number(b.paidAmount)>0?"<div class='row'><span class='lbl'>Amount Received</span><span class='val' style='color:#16a34a;font-weight:700'>"+pkr(Number(b.paidAmount))+"</span></div>":"")
+      +(b.paidAmount&&Number(b.paidAmount)<Number(b.amount)?"<div class='row'><span class='lbl' style='color:#dc2626;font-weight:800'>Balance Due</span><span class='val' style='color:#dc2626;font-weight:900;font-size:14px'>"+pkr(Number(b.amount)-Number(b.paidAmount))+"</span></div>":"")
+      +(!b.paidAmount||Number(b.paidAmount)>=Number(b.amount)?"<div class='row'><span class='lbl'>Status</span><span class='val' style='color:#16a34a'>Fully Paid</span></div>":"")
       +"</div>"
       +"<div class='bank'><div class='bt'>"+AGENCY.bank.name+"</div>"
       +"<div class='row'><span class='lbl'>Title</span><span class='val'>"+AGENCY.bank.title+"</span></div>"
@@ -290,47 +307,149 @@ function InvoiceModal(props){
 
 function CustomerHistoryModal(props){
   var c=props.customer,bookings=props.bookings;
-  var all=bookings.filter(function(b){return b.customer===c.name;});
-  var totalPaid=all.filter(function(b){return b.status==="Paid";}).reduce(function(s,b){return s+Number(b.amount);},0);
+  var all=bookings.filter(function(b){return b.customer===c.name;}).sort(function(a,b2){return new Date(a.date)-new Date(b2.date);});
+  var totalSale=all.reduce(function(s,b){return s+Number(b.amount);},0);
+  var totalPaid=all.reduce(function(s,b){return s+Number(b.paidAmount||b.amount);},0);
+  var totalBalance=totalSale-totalPaid;
   var totalProfit=all.reduce(function(s,b){return s+Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);},0);
-  var print=function(){var w=window.open("","_blank");w.document.write(buildInvoiceHTML(c,true,all));w.document.close();setTimeout(function(){w.print();},400);};
+  var [histTab,setHistTab]=useState("office");
+
+  function printOffice(){
+    var rows=all.map(function(b,i){
+      var bal=Number(b.amount)-Number(b.paidAmount||b.amount);
+      var prof=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);
+      return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'>"
+        +"<td>"+b.date+"</td>"
+        +"<td style='font-weight:700'>"+b.destination+"</td>"
+        +"<td>"+b.type+"</td>"
+        +"<td style='color:#16a34a;font-weight:700'>"+pkr(b.amount)+"</td>"
+        +"<td style='color:#dc2626'>"+pkr(b.cost||0)+"</td>"
+        +"<td>"+pkr(b.paidAmount||b.amount)+"</td>"
+        +"<td style='color:"+(bal>0?"#dc2626":"#16a34a")+"'>"+pkr(bal)+"</td>"
+        +"<td style='color:#b45309;font-weight:700'>"+pkr(prof)+"</td>"
+        +"<td><span style='background:"+(b.status==="Paid"?"#dcfce7":"#fef9c3")+";padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700'>"+b.status+"</span></td>"
+        +"</tr>";
+    }).join("");
+    var html="<!DOCTYPE html><html><head><title>History: "+c.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:15px}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:16px;font-weight:900;color:#16a34a;margin-bottom:8px}.cards{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.card{flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:7px 10px;text-align:center}.cl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase}.cv{font-size:14px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:6px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:5px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:10px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+    +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" | "+AGENCY.email2+"<br>"+AGENCY.address+"</div></div>"
+    +"<div class='title'>Office History — "+c.name+"</div>"
+    +"<div class='cards'><div class='card'><div class='cl'>Total Bookings</div><div class='cv'>"+all.length+"</div></div><div class='card'><div class='cl'>Total Sale</div><div class='cv'>"+pkr(totalSale)+"</div></div><div class='card'><div class='cl'>Total Paid</div><div class='cv'>"+pkr(totalPaid)+"</div></div><div class='card'><div class='cl'>Balance</div><div class='cv' style='color:#dc2626'>"+pkr(totalBalance)+"</div></div><div class='card'><div class='cl'>Total Profit</div><div class='cv' style='color:#b45309'>"+pkr(totalProfit)+"</div></div></div>"
+    +"<table><tr><th>Date</th><th>Destination</th><th>Package</th><th>Sale</th><th>Cost</th><th>Received</th><th>Balance</th><th>Profit</th><th>Status</th></tr>"+rows+"</table>"
+    +"<div class='foot'>"+AGENCY.name+" | Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
+    var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+  }
+
+  function printClient(){
+    var rows=all.map(function(b,i){
+      var bal=Number(b.amount)-Number(b.paidAmount||b.amount);
+      return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'>"
+        +"<td>"+b.date+"</td>"
+        +"<td style='font-weight:700'>"+b.destination+"</td>"
+        +"<td>"+b.type+"</td>"
+        +(b.description?"<td style='color:#6b7280;font-size:10px'>"+b.description+"</td>":"<td>--</td>")
+        +"<td style='color:#16a34a;font-weight:700'>"+pkr(b.amount)+"</td>"
+        +"<td style='color:#16a34a'>"+pkr(b.paidAmount||b.amount)+"</td>"
+        +"<td style='color:"+(bal>0?"#dc2626":"#16a34a")+";font-weight:700'>"+pkr(bal)+"</td>"
+        +"<td><span style='background:"+(b.status==="Paid"?"#dcfce7":"#fef9c3")+";padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700'>"+b.status+"</span></td>"
+        +"</tr>";
+    }).join("");
+    var html="<!DOCTYPE html><html><head><title>Statement: "+c.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:15px}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:55px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:12px}.cards{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.card{flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:8px 12px;text-align:center}.cl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:2px}.cv{font-size:15px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.bal{background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-top:12px;text-align:center}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px;line-height:1.8}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+    +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" | "+AGENCY.email2+"<br>"+AGENCY.address+"</div></div>"
+    +"<div class='title'>Account Statement</div>"
+    +"<div class='sub'>Client: <b>"+c.name+"</b> | Phone: "+c.phone+(c.passport?" | Passport: "+c.passport:"")+"</div>"
+    +"<div class='cards'><div class='card'><div class='cl'>Total Services</div><div class='cv'>"+all.length+"</div></div><div class='card'><div class='cl'>Total Amount</div><div class='cv'>"+pkr(totalSale)+"</div></div><div class='card'><div class='cl'>Amount Paid</div><div class='cv'>"+pkr(totalPaid)+"</div></div><div class='card'><div class='cl'>Balance Due</div><div class='cv' style='color:#dc2626'>"+pkr(totalBalance)+"</div></div></div>"
+    +"<table><tr><th>Date</th><th>Destination</th><th>Service</th><th>Description</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th></tr>"+rows+"</table>"
+    +(totalBalance>0?"<div class='bal'>⚠️ <b>Outstanding Balance: "+pkr(totalBalance)+"</b> — Baaki rakam jama karwayein</div>":"<div class='bal' style='background:#dcfce7;border-color:#bbf7d0'>✅ <b>Sab payments clear hain!</b></div>")
+    +"<div class='foot'>"+AGENCY.name+"<br>"+AGENCY.phone1+" | "+AGENCY.email2+"<br>"+AGENCY.address+"</div></body></html>";
+    var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+  }
+
   return(
-    <Modal title={"All-Time History: "+c.name} onClose={props.onClose} wide={true}>
-      <div style={{background:C.accentSoft,borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",gap:16,flexWrap:"wrap",fontSize:12}}>
-        <div><div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>Customer</div><div style={{fontWeight:800,fontSize:13}}>{c.name}</div></div>
-        <div><div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>Phone</div><div>{c.phone}</div></div>
-        <div><div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>Total Bookings</div><div style={{fontWeight:800,color:C.accent}}>{all.length}</div></div>
-        <div><div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>Total Paid</div><div style={{fontWeight:800,color:C.accent}}>{pkr(totalPaid)}</div></div>
-        <div><div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>Total Profit</div><div style={{fontWeight:800,color:totalProfit>=0?C.gold:C.red}}>{pkr(totalProfit)}</div></div>
+    <Modal title={"History: "+c.name} onClose={props.onClose} wide={true}>
+      {/* Summary cards */}
+      <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+        {[["Bookings",all.length,C.accent],["Total Sale",pkr(totalSale),C.accent],["Paid",pkr(totalPaid),C.accent],["Balance",pkr(totalBalance),totalBalance>0?C.red:C.accent],["Profit",pkr(totalProfit),C.gold]].map(function(s){return(
+          <div key={s[0]} style={{flex:1,minWidth:80,background:C.accentSoft,border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",textAlign:"center"}}>
+            <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>{s[0]}</div>
+            <div style={{color:s[2],fontWeight:900,fontSize:13}}>{s[1]}</div>
+          </div>
+        );})}
       </div>
-      <div style={{maxHeight:260,overflowY:"auto",border:"1.5px solid "+C.border,borderRadius:10,marginBottom:12}}>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-          <thead><tr style={{background:C.accentSoft}}>{["Date","Destination","Package","Sale","Cost","Comm.","GST","Total","Profit","Status"].map(function(h){return <th key={h} style={{padding:"8px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;})}</tr></thead>
+
+      {/* 2 Tabs */}
+      <div style={{display:"flex",gap:0,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:12}}>
+        <button onClick={function(){setHistTab("office");}} style={{flex:1,padding:"8px 0",border:"none",background:histTab==="office"?C.accent:"transparent",color:histTab==="office"?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:12}}>
+          🏢 Office View (Full Details)
+        </button>
+        <button onClick={function(){setHistTab("client");}} style={{flex:1,padding:"8px 0",border:"none",background:histTab==="client"?"#0284c7":"transparent",color:histTab==="client"?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:12}}>
+          👤 Client Statement
+        </button>
+      </div>
+
+      {/* Table */}
+      <div style={{maxHeight:280,overflowY:"auto",border:"1.5px solid "+C.border,borderRadius:10,marginBottom:12}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:histTab==="office"?700:550}}>
+          <thead><tr style={{background:C.accentSoft}}>
+            {histTab==="office"
+              ?["Date","Destination","Package","Sale","Cost","Received","Balance","Profit","Status"].map(function(h){return <th key={h} style={{padding:"7px 8px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase",position:"sticky",top:0,background:C.accentSoft}}>{h}</th>;})
+              :["Date","Destination","Service","Description","Total","Paid","Balance","Status"].map(function(h){return <th key={h} style={{padding:"7px 8px",textAlign:"left",color:"#0284c7",fontWeight:800,fontSize:9,textTransform:"uppercase",position:"sticky",top:0,background:C.accentSoft}}>{h}</th>;})}
+          </tr></thead>
           <tbody>
             {all.map(function(b,i){
-              var tax2=Math.round(b.amount*.05);
-              var p=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);
-              return(<tr key={b.id} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
-                <td style={{padding:"7px 10px",color:C.muted,fontSize:10}}>{b.date}</td>
-                <td style={{padding:"7px 10px",fontWeight:600}}>{b.destination}</td>
-                <td style={{padding:"7px 10px",color:C.muted,fontSize:10}}>{b.type}</td>
-                <td style={{padding:"7px 10px",color:C.accent,fontWeight:700}}>{pkr(b.amount)}</td>
-                <td style={{padding:"7px 10px",color:C.red,fontSize:10}}>{pkr(b.cost||0)}</td>
-                <td style={{padding:"7px 10px",color:C.red,fontSize:10}}>{pkr(b.commission||0)}</td>
-                <td style={{padding:"7px 10px",color:C.gold,fontSize:10}}>{pkr(tax2)}</td>
-                <td style={{padding:"7px 10px",color:C.accent,fontWeight:700}}>{pkr(b.amount+tax2)}</td>
-                <td style={{padding:"7px 10px",color:p>=0?C.gold:C.red,fontWeight:700}}>{pkr(p)}</td>
-                <td style={{padding:"7px 10px"}}><Badge status={b.status}/></td>
-              </tr>);
+              var bal=Number(b.amount)-Number(b.paidAmount||b.amount);
+              var prof=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);
+              return(
+                <tr key={b.id} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
+                  <td style={{padding:"6px 8px",color:C.muted,fontSize:10}}>{b.date}</td>
+                  <td style={{padding:"6px 8px",fontWeight:700}}>{b.destination}</td>
+                  <td style={{padding:"6px 8px",fontSize:10,color:C.muted}}>{b.type}</td>
+                  {histTab==="office"?(
+                    <>
+                      <td style={{padding:"6px 8px",color:C.accent,fontWeight:700}}>{pkr(b.amount)}</td>
+                      <td style={{padding:"6px 8px",color:C.red,fontSize:10}}>{pkr(b.cost||0)}</td>
+                      <td style={{padding:"6px 8px",color:C.accent}}>{pkr(b.paidAmount||b.amount)}</td>
+                      <td style={{padding:"6px 8px",color:bal>0?C.red:C.accent,fontWeight:700}}>{pkr(bal)}</td>
+                      <td style={{padding:"6px 8px",color:prof>=0?C.gold:C.red,fontWeight:700}}>{pkr(prof)}</td>
+                    </>
+                  ):(
+                    <>
+                      <td style={{padding:"6px 8px",color:C.muted,fontSize:10,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis"}}>{b.description||"--"}</td>
+                      <td style={{padding:"6px 8px",color:C.accent,fontWeight:700}}>{pkr(b.amount)}</td>
+                      <td style={{padding:"6px 8px",color:C.accent}}>{pkr(b.paidAmount||b.amount)}</td>
+                      <td style={{padding:"6px 8px",color:bal>0?C.red:C.accent,fontWeight:700}}>{pkr(bal)}</td>
+                    </>
+                  )}
+                  <td style={{padding:"6px 8px"}}><Badge status={b.status}/></td>
+                </tr>
+              );
             })}
-            {all.length===0&&<tr><td colSpan={10} style={{padding:14,textAlign:"center",color:C.muted}}>No bookings yet</td></tr>}
+            {all.length===0&&<tr><td colSpan={9} style={{padding:16,textAlign:"center",color:C.muted}}>Koi booking nahi</td></tr>}
           </tbody>
         </table>
       </div>
-      <button onClick={print} style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>Print All-Time History</button>
+
+      {/* Balance warning */}
+      {totalBalance>0&&(
+        <div style={{background:"#fee2e2",border:"1px solid #fecaca",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:C.red,fontWeight:700}}>
+          ⚠️ Outstanding Balance: {pkr(totalBalance)} — Client se baaki rakam leni hai
+        </div>
+      )}
+
+      {/* Print buttons */}
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={printOffice}
+          style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 0",fontWeight:800,cursor:"pointer",fontSize:12}}>
+          🖨️ Print Office View
+        </button>
+        <button onClick={printClient}
+          style={{flex:1,background:"#0284c7",color:"#fff",border:"none",borderRadius:8,padding:"9px 0",fontWeight:800,cursor:"pointer",fontSize:12}}>
+          🖨️ Print Client Statement
+        </button>
+      </div>
     </Modal>
   );
 }
+
 
 // ─── PARTNER CASE MODAL ──────────────────────────────────────
 function PartnerCaseModal(props){
@@ -370,7 +489,7 @@ function PartnerCaseModal(props){
     <Modal title={props.isNew?"New Partner Case":"Edit Partner Case"} onClose={props.onClose} wide={true}>
       <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
         <Field label="Case Title" value={f.title} onChange={function(v){setF(Object.assign({},f,{title:v}));}} half={true}/>
-        <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Active","Closed","Pending"]} half={true}/>
+        <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Active","In Progress","Visa Approved","Visa Refused","Closed"]} half={true}/>
         <Field label="Date" value={f.date} onChange={function(v){setF(Object.assign({},f,{date:v}));}} type="date" half={true}/>
         <Field label="Notes" value={f.notes} onChange={function(v){setF(Object.assign({},f,{notes:v}));}} half={true}/>
       </div>
@@ -561,14 +680,39 @@ function PartnerCasesTab(props){
   }
   function delCase(id){var u=cases.filter(function(x){return x.id!==id;});setCases(u);sv("olympia_cases",u);fbSave("olympia_cases",u);showToast();}
 
+  var [cSearch,setCSearch]=useState("");
+  var [cFilter,setCFilter]=useState("active");
+  var isDone=function(c){return c.status==="Visa Approved"||c.status==="Visa Refused"||c.status==="Closed";};
+  var fCases=cases.filter(function(c){
+    var ms=!cSearch||(c.title||"").toLowerCase().includes(cSearch.toLowerCase());
+    if(cFilter==="active") return ms&&!isDone(c);
+    if(cFilter==="closed") return ms&&isDone(c);
+    return ms;
+  }).sort(function(a,b){return(isDone(a)?1:0)-(isDone(b)?1:0);});
+
   return(<div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:8}}>
       <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Partner Cases</h2>
-      <button onClick={function(){setEditCase(null);setShowForm(true);}} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>+ New Case</button>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        <input value={cSearch} onChange={function(e){setCSearch(e.target.value);}} placeholder="Search..."
+          style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 10px",fontSize:12,outline:"none",minWidth:120}}/>
+        <button onClick={function(){setEditCase(null);setShowForm(true);}} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>+ New Case</button>
+      </div>
     </div>
-    {cases.length===0&&<div style={{color:C.muted,fontSize:13,padding:"20px 0"}}>Koi case nahi — New Case click karein</div>}
+    <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+      {[["active","🔄 Active"],["closed","✅ Done"],["all","All"]].map(function(fl){
+        var cnt=fl[0]==="active"?cases.filter(function(c){return !isDone(c);}).length:fl[0]==="closed"?cases.filter(function(c){return isDone(c);}).length:cases.length;
+        return(
+          <button key={fl[0]} onClick={function(){setCFilter(fl[0]);}}
+            style={{padding:"5px 12px",border:"1.5px solid "+C.border,borderRadius:8,background:cFilter===fl[0]?C.accent:"#fff",color:cFilter===fl[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+            {fl[1]} ({cnt})
+          </button>
+        );
+      })}
+    </div>
+    {fCases.length===0&&<div style={{color:C.muted,fontSize:13,padding:"20px 0"}}>Koi case nahi</div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
-      {cases.map(function(c){
+      {fCases.map(function(c){
         var pArr=Array.isArray(c.partners)?c.partners:[];
         var eArr=Array.isArray(c.expenses)?c.expenses:[];
         var totalIn=Number(c.clientAmount||pArr.reduce(function(s,p){return s+Number(p.amount||0);},0));
@@ -916,7 +1060,6 @@ function PersonalExpenses(props){
   var [filterMo,setFilterMo]=useState(new Date().getMonth());
   var [filterYr,setFilterYr]=useState(new Date().getFullYear());
   var [showForm,setShowForm]=useState(false);
-  var [editExp,setEditExp]=useState(null);
   var [search,setSearch]=useState("");
 
   var emptyExp={id:"",desc:"",amount:"",category:"Food",date:new Date().toISOString().split("T")[0],section:"personal",notes:""};
@@ -927,19 +1070,10 @@ function PersonalExpenses(props){
 
   function addExpense(){
     if(!form.desc||!form.amount)return;
-    if(editExp){
-      var updated=personal.map(function(e){
-        return e.id===editExp.id?Object.assign({},form,{id:editExp.id,amount:Number(form.amount)}):e;
-      });
-      setPersonal(updated);
-    } else {
-      var newExp=Object.assign({},form,{id:uid("PE"),amount:Number(form.amount),section:activeSection});
-      var newList=personal.concat([newExp]);
-      setPersonal(newList);
-    }
+    var newExp=Object.assign({},form,{id:uid("PE"),amount:Number(form.amount),section:activeSection});
+    var newList=personal.concat([newExp]);setPersonal(newList);
     setForm(Object.assign({},emptyExp,{section:activeSection}));
     setShowForm(false);
-    setEditExp(null);
   }
   function delExpense(id){var newList2=personal.filter(function(e){return e.id!==id;});setPersonal(newList2);}
 
@@ -1072,12 +1206,7 @@ function PersonalExpenses(props){
                 <td style={{padding:"9px 11px",color:C.red,fontWeight:800}}>{pkr(e.amount)}</td>
                 <td style={{padding:"9px 11px",fontSize:10,color:C.muted}}>{e.notes||"--"}</td>
                 <td style={{padding:"9px 11px"}}>
-                  <div style={{display:"flex",gap:4}}>
-                    <button onClick={function(){setEditExp(e);setForm(Object.assign({},e));setShowForm(true);}}
-                      style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Edit</button>
-                    <button onClick={function(){delExpense(e.id);}}
-                      style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Del</button>
-                  </div>
+                  <button onClick={function(){delExpense(e.id);}} style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Del</button>
                 </td>
               </tr>
             );})}
@@ -1088,7 +1217,7 @@ function PersonalExpenses(props){
 
       {/* Add Form Modal */}
       {showForm&&(
-        <Modal title={(editExp?"Edit ":"Add ")+(activeSection==="personal"?"Personal":"Family")+" Expense"} onClose={function(){setShowForm(false);setEditExp(null);}}>
+        <Modal title={"Add "+(activeSection==="personal"?"Personal":"Family")+" Expense"} onClose={function(){setShowForm(false);}}>
           <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
             <Field label="Description" value={form.desc} onChange={function(v){setForm(Object.assign({},form,{desc:v}));}}/>
             <Field label="Category" value={form.category} onChange={function(v){setForm(Object.assign({},form,{category:v}));}}
@@ -1098,7 +1227,7 @@ function PersonalExpenses(props){
             <Field label="Notes (optional)" value={form.notes||""} onChange={function(v){setForm(Object.assign({},form,{notes:v}));}} half={true}/>
           </div>
           <button onClick={addExpense} style={{width:"100%",background:activeSection==="personal"?C.accent:C.gold,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14,marginTop:4}}>
-            {editExp?"💾 Save Changes":"+ Add Expense"}
+            + Add Expense
           </button>
         </Modal>
       )}
@@ -1108,180 +1237,604 @@ function PersonalExpenses(props){
 
 
 
+// ─── EXPENSE ADDER COMPONENT ────────────────────────────────
+function ExpenseAdder(props){
+  var expenses=props.expenses||[];
+  var [ed,setEd]=useState("");
+  var [ea,setEa]=useState("");
+  return(
+    <div>
+      <div style={{display:"flex",gap:5,marginBottom:6}}>
+        <input value={ed} onChange={function(e){setEd(e.target.value);}} placeholder="Description"
+          style={{flex:2,background:"#fff",border:"1.5px solid #fde68a",borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+        <input value={ea} onChange={function(e){setEa(e.target.value);}} placeholder="Amount" type="number"
+          style={{flex:1,background:"#fff",border:"1.5px solid #fde68a",borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+        <button onClick={function(){if(!ed||!ea)return;props.onAdd(ed,ea);setEd("");setEa("");}}
+          style={{background:"#f59e0b",color:"#fff",border:"none",borderRadius:6,padding:"6px 8px",cursor:"pointer",fontWeight:700}}>+</button>
+      </div>
+      {expenses.map(function(ex,i){return(
+        <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #fde68a",fontSize:11}}>
+          <span>{ex.desc}</span>
+          <div style={{display:"flex",gap:5,alignItems:"center"}}>
+            <span style={{color:"#dc2626",fontWeight:700}}>{pkr(ex.amount)}</span>
+            <button onClick={function(){props.onRemove(i);}}
+              style={{background:"#fee2e2",border:"none",color:"#dc2626",borderRadius:4,padding:"1px 5px",cursor:"pointer",fontSize:10}}>x</button>
+          </div>
+        </div>
+      );})}
+      <div style={{display:"flex",justifyContent:"space-between",fontWeight:800,color:"#dc2626",marginTop:6,fontSize:12}}>
+        <span>Total</span><span>{pkr(props.totalExpenses||0)}</span>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── UDHAR TAB ───────────────────────────────────────────────
+function UdharTab(props){
+  var udhar=Array.isArray(props.udhar)?props.udhar:[];
+  var setUdhar=props.setUdhar;
+
+  var emptyU={id:"",name:"",phone:"",amount:"",date:new Date().toISOString().split("T")[0],
+    purpose:"",sentTo:"",type:"Diya",status:"Pending",notes:"",paidBack:""};
+
+  var [showForm,setShowForm]=useState(false);
+  var [editU,setEditU]=useState(null);
+  var [filterType,setFilterType]=useState("all");
+
+  var filtered=udhar.filter(function(u){
+    if(filterType==="diya") return u.type==="Diya";
+    if(filterType==="liya") return u.type==="Liya";
+    return true;
+  }).sort(function(a,b){
+    var ac=a.status==="Wapas"?1:0;
+    var bc=b.status==="Wapas"?1:0;
+    if(ac!==bc) return ac-bc;
+    return new Date(b.date)-new Date(a.date);
+  });
+
+  var totalDiya=udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0);},0);
+  var totalLiya=udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0);},0);
+
+  function saveU(u){
+    var updated=editU?udhar.map(function(x){return x.id===u.id?u:x;}):udhar.concat([u]);
+    setUdhar(updated);setShowForm(false);setEditU(null);
+  }
+  function delU(id){if(window.confirm("Delete?"))setUdhar(udhar.filter(function(x){return x.id!==id;}));}
+
+  function UForm(fp){
+    var [f,setF]=useState(fp.u?Object.assign({},fp.u):emptyU);
+    return(
+      <Modal title={fp.isNew?"New Entry":"Edit Entry"} onClose={fp.onClose} wide={false}>
+        <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
+          <div style={{width:"100%",marginBottom:10}}>
+            <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:5,textTransform:"uppercase"}}>Type</label>
+            <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+              <button onClick={function(){setF(Object.assign({},f,{type:"Diya"}));}}
+                style={{flex:1,padding:"9px 0",border:"none",background:f.type==="Diya"?C.red:"transparent",color:f.type==="Diya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:13}}>
+                💸 Maine Diya (I Gave)
+              </button>
+              <button onClick={function(){setF(Object.assign({},f,{type:"Liya"}));}}
+                style={{flex:1,padding:"9px 0",border:"none",background:f.type==="Liya"?C.accent:"transparent",color:f.type==="Liya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:13}}>
+                💰 Maine Liya (I Took)
+              </button>
+            </div>
+          </div>
+          <Field label="Naam (Jis se liya/diya)" value={f.name} onChange={function(v){setF(Object.assign({},f,{name:v}));}} half={true}/>
+          <Field label="Phone" value={f.phone||""} onChange={function(v){setF(Object.assign({},f,{phone:v}));}} half={true}/>
+          <Field label="Amount (PKR)" value={f.amount} onChange={function(v){setF(Object.assign({},f,{amount:v}));}} type="number" half={true}/>
+          <Field label="Date" value={f.date} onChange={function(v){setF(Object.assign({},f,{date:v}));}} type="date" half={true}/>
+          <Field label="Purpose / Wajah" value={f.purpose||""} onChange={function(v){setF(Object.assign({},f,{purpose:v}));}} half={true}/>
+          <Field label="Kahan Bheja / Received From" value={f.sentTo||""} onChange={function(v){setF(Object.assign({},f,{sentTo:v}));}} half={true}/>
+          <Field label="Amount Wapas (agar kuch mila)" value={f.paidBack||""} onChange={function(v){setF(Object.assign({},f,{paidBack:v}));}} type="number" half={true}/>
+          <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Pending","Partial","Wapas"]} half={true}/>
+          <Field label="Notes" value={f.notes||""} onChange={function(v){setF(Object.assign({},f,{notes:v}));}} rows={2}/>
+        </div>
+        <button onClick={function(){fp.onSave(Object.assign({},f,{id:f.id||uid("UD")}));}}
+          style={{width:"100%",background:f.type==="Diya"?C.red:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
+          Save
+        </button>
+      </Modal>
+    );
+  }
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Udhar / Loans 💰</h2>
+        <button onClick={function(){setEditU(null);setShowForm(true);}}
+          style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>+ New Entry</button>
+      </div>
+
+      {/* Summary */}
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{flex:1,background:"#fee2e2",border:"1.5px solid #fecaca",borderRadius:12,padding:"14px",textAlign:"center"}}>
+          <div style={{color:C.red,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Maine Diya (Wapas Lena Hai)</div>
+          <div style={{color:C.red,fontWeight:900,fontSize:22}}>{pkr(totalDiya)}</div>
+          <div style={{color:C.muted,fontSize:10}}>{udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).length} pending entries</div>
+        </div>
+        <div style={{flex:1,background:"#dcfce7",border:"1.5px solid "+C.border,borderRadius:12,padding:"14px",textAlign:"center"}}>
+          <div style={{color:C.accent,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Maine Liya (Dena Hai)</div>
+          <div style={{color:C.accent,fontWeight:900,fontSize:22}}>{pkr(totalLiya)}</div>
+          <div style={{color:C.muted,fontSize:10}}>{udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).length} pending entries</div>
+        </div>
+        <div style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:12,padding:"14px",textAlign:"center"}}>
+          <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Net Position</div>
+          <div style={{color:(totalDiya-totalLiya)>=0?C.red:C.accent,fontWeight:900,fontSize:22}}>{pkr(Math.abs(totalDiya-totalLiya))}</div>
+          <div style={{color:C.muted,fontSize:10}}>{totalDiya>=totalLiya?"Aap ko milna hai":"Aap ko dena hai"}</div>
+        </div>
+      </div>
+
+      {/* Filter */}
+      <div style={{display:"flex",gap:6,marginBottom:12}}>
+        {[["all","All"],["diya","💸 Maine Diya"],["liya","💰 Maine Liya"]].map(function(fl){return(
+          <button key={fl[0]} onClick={function(){setFilterType(fl[0]);}}
+            style={{padding:"6px 12px",border:"1.5px solid "+C.border,borderRadius:8,background:filterType===fl[0]?C.accent:"#fff",color:filterType===fl[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+            {fl[1]}
+          </button>
+        );})}
+      </div>
+
+      {/* List */}
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {filtered.map(function(u){
+          var balance=Number(u.amount||0)-Number(u.paidBack||0);
+          var isDiya=u.type==="Diya";
+          return(
+            <div key={u.id} style={{background:"#fff",border:"1.5px solid "+(u.status==="Wapas"?"#bbf7d0":isDiya?"#fecaca":C.border),borderRadius:12,padding:14,opacity:u.status==="Wapas"?0.6:1,boxShadow:C.shadow}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                    <span style={{background:isDiya?"#fee2e2":"#dcfce7",color:isDiya?C.red:C.accent,padding:"2px 9px",borderRadius:20,fontSize:10,fontWeight:800}}>{isDiya?"💸 Diya":"💰 Liya"}</span>
+                    <span style={{background:u.status==="Wapas"?"#dcfce7":u.status==="Partial"?"#fef9c3":"#fee2e2",color:u.status==="Wapas"?C.accent:u.status==="Partial"?"#a16207":C.red,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{u.status}</span>
+                  </div>
+                  <div style={{fontWeight:800,fontSize:14}}>{u.name}</div>
+                  {u.phone&&<div style={{color:C.muted,fontSize:11}}>📞 {u.phone}</div>}
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{color:isDiya?C.red:C.accent,fontWeight:900,fontSize:18}}>{pkr(u.amount)}</div>
+                  {u.paidBack&&Number(u.paidBack)>0&&<div style={{color:C.accent,fontSize:11}}>Wapas: {pkr(u.paidBack)}</div>}
+                  {balance>0&&u.status!=="Wapas"&&<div style={{color:C.red,fontSize:12,fontWeight:700}}>Baqi: {pkr(balance)}</div>}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:C.muted,marginBottom:8}}>
+                <span>📅 {u.date}</span>
+                {u.purpose&&<span>📝 {u.purpose}</span>}
+                {u.sentTo&&<span>📍 {u.sentTo}</span>}
+                {u.notes&&<span>💬 {u.notes}</span>}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={function(){setEditU(u);setShowForm(true);}}
+                  style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Edit</button>
+                {u.status!=="Wapas"&&<button onClick={function(){
+                  var updated=udhar.map(function(x){return x.id===u.id?Object.assign({},x,{status:"Wapas",paidBack:x.amount}):x;});
+                  setUdhar(updated);
+                }} style={{flex:1,background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>✅ Wapas Ho Gaya</button>}
+                <button onClick={function(){delU(u.id);}}
+                  style={{flex:1,background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Del</button>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length===0&&<div style={{padding:"30px",textAlign:"center",color:C.muted}}>Koi entry nahi</div>}
+      </div>
+
+      {showForm&&<UForm u={editU} isNew={!editU} onSave={saveU} onClose={function(){setShowForm(false);setEditU(null);}}/>}
+    </div>
+  );
+}
+
 // ─── GROUPS TAB ─────────────────────────────────────────────
 function GroupsTab(props){
   var groups=Array.isArray(props.groups)?props.groups:[];
   var setGroups=props.setGroups;
-  var customers=props.customers||[];
 
-  var emptyGroup={id:"",name:"",destination:"",date:"",departDate:"",returnDate:"",
-    totalSeats:0,bookedSeats:0,pricePerPerson:0,status:"Active",notes:"",
-    members:[],expenses:[]};
+  var emptyG={id:"",name:"",destination:"",groupType:"",organization:"",eventName:"",
+    departDate:"",returnDate:"",pricePerPerson:0,status:"Active",notes:"",description:"",
+    members:[],expenses:[],partners:[]};
 
   var [showForm,setShowForm]=useState(false);
   var [editG,setEditG]=useState(null);
   var [viewG,setViewG]=useState(null);
 
+  var statusC={Active:{bg:"#dcfce7",c:"#15803d"},Completed:{bg:"#dbeafe",c:"#1d4ed8"},Cancelled:{bg:"#fee2e2",c:"#b91c1c"},Upcoming:{bg:"#fef9c3",c:"#a16207"}};
+
   function saveG(g){
     var updated=editG?groups.map(function(x){return x.id===g.id?g:x;}):groups.concat([g]);
     setGroups(updated);setShowForm(false);setEditG(null);
   }
-  function delG(id){if(window.confirm("Delete this group?"))setGroups(groups.filter(function(x){return x.id!==id;}));}
-
-  var statusColors={Active:{bg:"#dcfce7",c:"#15803d"},Completed:{bg:"#dbeafe",c:"#1d4ed8"},Cancelled:{bg:"#fee2e2",c:"#b91c1c"},Upcoming:{bg:"#fef9c3",c:"#a16207"}};
+  function delG(id){if(window.confirm("Delete?"))setGroups(groups.filter(function(x){return x.id!==id;}));}
 
   function GroupForm(fp){
-    var [f,setF]=useState(fp.g?Object.assign({},fp.g):emptyGroup);
-    var [mName,setMName]=useState("");
-    var [mPhone,setMPhone]=useState("");
-    var [mPassport,setMPassport]=useState("");
-    var [mVisaStatus,setMVisaStatus]=useState("Pending");
-    var [mPaid,setMPaid]=useState("Unpaid");
-    var [eDesc,setEDesc]=useState("");
-    var [eAmt,setEAmt]=useState("");
-
+    var [f,setF]=useState(fp.g?Object.assign({},fp.g):emptyG);
     var members=Array.isArray(f.members)?f.members:[];
     var expenses=Array.isArray(f.expenses)?f.expenses:[];
-    var totalRevenue=members.length*Number(f.pricePerPerson||0);
+    var gPartners=Array.isArray(f.partners)?f.partners:[];
+    var totalInvested=gPartners.reduce(function(s,p){return s+Number(p.amount||0);},0);
+    var totalRevenue=members.reduce(function(s,m){return s+Number(m.price||f.pricePerPerson||0);},0);
     var totalExpenses=expenses.reduce(function(s,e){return s+Number(e.amount||0);},0);
-    var totalPaid=members.filter(function(m){return m.paid==="Paid";}).length*Number(f.pricePerPerson||0);
+    var totalPaid=members.filter(function(m){return m.paid==="Paid";}).reduce(function(s,m){return s+Number(m.price||f.pricePerPerson||0);},0);
     var totalUnpaid=totalRevenue-totalPaid;
-    var netProfit=totalRevenue-totalExpenses;
+    var netProfit=totalRevenue-totalExpenses-totalInvested;
     var approvedVisa=members.filter(function(m){return m.visaStatus==="Approved";}).length;
-    var refusedVisa=members.filter(function(m){return m.visaStatus==="Refused";}).length;
 
+    // Member form states
+    var [mFirst,setMFirst]=useState("");
+    var [mLast,setMLast]=useState("");
+    var [mPhone,setMPhone]=useState("");
+    var [mPassport,setMPassport]=useState("");
+    var [mDob,setMDob]=useState("");
+    var [mExpiry,setMExpiry]=useState("");
+    var [mNat,setMNat]=useState("");
+    var [mRef,setMRef]=useState("");
+    var [mDesc,setMDesc]=useState("");
+    var [mPrice,setMPrice]=useState("");
+    var [mVisa,setMVisa]=useState("Pending");
+    var [mPaid,setMPaid]=useState("Unpaid");
+    var [editIdx,setEditIdx]=useState(null);
+    var [showOCR,setShowOCR]=useState(false);
+    var [passImg,setPassImg]=useState(null);
+    var [ocrBusy,setOcrBusy]=useState(false);
+    var [gpName,setGpName]=useState("");
+    var [gpAmt,setGpAmt]=useState("");
+    var [showPart,setShowPart]=useState(false);
+
+    function clearMember(){
+      setMFirst("");setMLast("");setMPhone("");setMPassport("");
+      setMDob("");setMExpiry("");setMNat("");setMRef("");setMDesc("");
+      setMPrice("");setMVisa("Pending");setMPaid("Unpaid");setEditIdx(null);
+    }
     function addMember(){
-      if(!mName)return;
-      setF(Object.assign({},f,{members:members.concat([{name:mName,phone:mPhone,passport:mPassport,visaStatus:mVisaStatus,paid:mPaid}])}));
-      setMName("");setMPhone("");setMPassport("");setMVisaStatus("Pending");setMPaid("Unpaid");
+      if(!mFirst)return;
+      var nm={name:(mFirst+" "+mLast).trim(),firstName:mFirst,surname:mLast,
+        phone:mPhone,passport:mPassport,dob:mDob,expiry:mExpiry,nationality:mNat,
+        reference:mRef,description:mDesc,price:Number(mPrice||f.pricePerPerson||0),
+        visaStatus:mVisa,paid:mPaid};
+      var newMems=editIdx!==null?members.map(function(m,i){return i===editIdx?nm:m;}):members.concat([nm]);
+      setF(Object.assign({},f,{members:newMems}));clearMember();
     }
-    function removeMember(i){setF(Object.assign({},f,{members:members.filter(function(_,j){return j!==i;})}));}
-    function updateMember(i,field,val){
-      var newM=members.map(function(m,j){return j===i?Object.assign({},m,{[field]:val}):m;});
-      setF(Object.assign({},f,{members:newM}));
+    function editMem(i){
+      var m=members[i];
+      setMFirst(m.firstName||m.name||"");setMLast(m.surname||"");
+      setMPhone(m.phone||"");setMPassport(m.passport||"");
+      setMDob(m.dob||"");setMExpiry(m.expiry||"");setMNat(m.nationality||"");
+      setMRef(m.reference||"");setMDesc(m.description||"");setMPrice(m.price||"");
+      setMVisa(m.visaStatus||"Pending");setMPaid(m.paid||"Unpaid");setEditIdx(i);
     }
-    function addExpense(){
-      if(!eDesc||!eAmt)return;
-      setF(Object.assign({},f,{expenses:expenses.concat([{desc:eDesc,amount:Number(eAmt)}])}));
-      setEDesc("");setEAmt("");
+    function updateMem(i,field,val){
+      setF(Object.assign({},f,{members:members.map(function(m,j){return j===i?Object.assign({},m,{[field]:val}):m;})}));
+    }
+    function doPassport(e){
+      var file=e.target.files[0];if(!file)return;
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        setPassImg(ev.target.result);setShowOCR(true);setOcrBusy(true);
+        function runOCR(img){
+          if(!window.Tesseract){setOcrBusy(false);return;}
+          window.Tesseract.recognize(img,"eng",{logger:function(){}}).then(function(r){
+            var txt=r.data.text||"";
+            var rows=txt.split("\n").map(function(l){return l.trim().split(" ").join("");}).filter(function(l){return l.length>20;});
+            var mrzReg=new RegExp("^[A-Z0-9<]{30,}$");
+            var mrz=rows.filter(function(l){return mrzReg.test(l);});
+            if(mrz.length>=2){
+              var l1=mrz[0];var l2=mrz[1]||"";
+              var ns=l1.substring(5).split("<<");
+              var sn=(ns[0]||"").split("<").join(" ").trim();
+              var gn=(ns[1]||"").split("<").join(" ").trim();
+              if(gn)setMFirst(gn);
+              if(sn)setMLast(sn);
+              var pn=l2.substring(0,9).split("<").join("");
+              if(pn)setMPassport(pn);
+              var nt=l2.substring(10,13).split("<").join("");
+              if(nt)setMNat(nt);
+              var d6=new RegExp("^[0-9]{6}$");
+              var db=l2.substring(13,19);
+              if(d6.test(db)){setMDob(db.substring(4,6)+"/"+db.substring(2,4)+"/"+(Number(db.substring(0,2))<30?"20":"19")+db.substring(0,2));}
+              var ex=l2.substring(21,27);
+              if(d6.test(ex)){setMExpiry(ex.substring(4,6)+"/"+ex.substring(2,4)+"/20"+ex.substring(0,2));}
+            }
+            setOcrBusy(false);
+          }).catch(function(){setOcrBusy(false);});
+        }
+        if(!window.Tesseract){
+          var sc=document.createElement("script");
+          sc.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+          sc.onload=function(){runOCR(ev.target.result);};
+          sc.onerror=function(){setOcrBusy(false);};
+          document.head.appendChild(sc);
+        } else {runOCR(ev.target.result);}
+      };
+      reader.readAsDataURL(file);e.target.value="";
+    }
+    function doCSV(e){
+      var file=e.target.files[0];if(!file)return;
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        var rows=ev.target.result.split("\n");
+        var hdrs=rows[0]?rows[0].split(",").map(function(h){return h.trim().toLowerCase();}):[];
+        var imp=[];
+        for(var i=1;i<rows.length;i++){
+          var cols=rows[i].split(",").map(function(c){return c.trim();});
+          if(!cols[0])continue;
+          function get(keys){for(var k=0;k<keys.length;k++){var hi=hdrs.indexOf(keys[k]);if(hi>=0&&cols[hi])return cols[hi];}return "";}
+          var fn=get(["first name","firstname","given name","name"])||cols[0]||"";
+          var ln=get(["surname","last name","lastname","family name"])||cols[1]||"";
+          if(!fn&&!ln)continue;
+          imp.push({name:(fn+" "+ln).trim(),firstName:fn,surname:ln,
+            phone:get(["phone","mobile","contact"]),passport:get(["passport","passport no","passport number"]),
+            dob:get(["dob","date of birth","birth date"]),expiry:get(["expiry","passport expiry","expiry date","valid till"]),
+            nationality:get(["nationality","country"]),reference:get(["reference","ref"]),
+            description:get(["description","notes","remarks"]),
+            price:Number(f.pricePerPerson||0),visaStatus:"Pending",paid:"Unpaid"});
+        }
+        if(imp.length===0){alert("Koi data nahi mila");return;}
+        if(window.confirm(imp.length+" members import karein?")){
+          setF(Object.assign({},f,{members:members.concat(imp)}));
+        }
+      };
+      reader.readAsText(file);e.target.value="";
     }
 
     return(
       <Modal title={fp.isNew?"New Group":"Edit Group"} onClose={fp.onClose} wide={true}>
+
+        {/* CSV Bulk Import */}
+        <div style={{background:"#eff6ff",border:"2px dashed #93c5fd",borderRadius:10,padding:"10px 14px",marginBottom:10}}>
+          <div style={{fontWeight:800,color:"#1d4ed8",fontSize:12,marginBottom:6}}>📊 Bulk Import — Poori List CSV se</div>
+          <input type="file" id="grpCsv" accept=".csv,.txt" style={{display:"none"}} onChange={doCSV}/>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            <button onClick={function(){document.getElementById("grpCsv").click();}}
+              style={{background:"#1d4ed8",color:"#fff",border:"none",borderRadius:7,padding:"6px 12px",cursor:"pointer",fontWeight:700,fontSize:11}}>
+              📂 Import CSV List
+            </button>
+            <button onClick={function(){
+              var a=document.createElement("a");
+              a.href="data:text/csv;charset=utf-8,"+encodeURIComponent("First Name,Surname,Phone,Passport No,DOB,Expiry,Nationality,Reference,Description\r\nAli,Ahmed,03001234567,AA1234567,15/03/1990,20/06/2028,Pakistani,,");
+              a.download="group_template.csv";a.click();
+            }} style={{background:"transparent",border:"1px solid #93c5fd",color:"#1d4ed8",borderRadius:7,padding:"6px 10px",cursor:"pointer",fontWeight:600,fontSize:10}}>
+              ⬇️ Template Download
+            </button>
+            <span style={{color:"#6b7280",fontSize:10}}>Columns: First Name, Surname, Phone, Passport, DOB, Expiry, Nationality</span>
+          </div>
+        </div>
+
+        {/* Group Type */}
+        <div style={{background:"#f0fdf4",border:"1.5px solid "+C.border,borderRadius:10,padding:"10px 14px",marginBottom:10}}>
+          <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:8}}>🏷️ Group Type</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:0,justifyContent:"space-between"}}>
+            <Field label="Group Type" value={f.groupType||""} onChange={function(v){setF(Object.assign({},f,{groupType:v}));}} options={["","Tourism","Education","College","School","Corporate","Conference","Exhibition","Medical","Religious","Other"]} half={true}/>
+            <Field label="Organization Name" value={f.organization||""} onChange={function(v){setF(Object.assign({},f,{organization:v}));}} half={true}/>
+            <Field label="Event Name (optional)" value={f.eventName||""} onChange={function(v){setF(Object.assign({},f,{eventName:v}));}} half={true}/>
+            <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Active","Upcoming","Completed","Cancelled"]} half={true}/>
+          </div>
+        </div>
+
+        {/* Basic info */}
         <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
           <Field label="Group Name" value={f.name} onChange={function(v){setF(Object.assign({},f,{name:v}));}} half={true}/>
           <Field label="Destination" value={f.destination} onChange={function(v){setF(Object.assign({},f,{destination:v}));}} half={true}/>
           <Field label="Depart Date" value={f.departDate} onChange={function(v){setF(Object.assign({},f,{departDate:v}));}} type="date" half={true}/>
           <Field label="Return Date" value={f.returnDate} onChange={function(v){setF(Object.assign({},f,{returnDate:v}));}} type="date" half={true}/>
-          <Field label="Price Per Person (PKR)" value={f.pricePerPerson} onChange={function(v){setF(Object.assign({},f,{pricePerPerson:v}));}} type="number" half={true}/>
-          <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Active","Upcoming","Completed","Cancelled"]} half={true}/>
+          <Field label="Price/Person (PKR)" value={f.pricePerPerson} onChange={function(v){setF(Object.assign({},f,{pricePerPerson:v}));}} type="number" half={true}/>
           <Field label="Notes" value={f.notes} onChange={function(v){setF(Object.assign({},f,{notes:v}));}} half={true}/>
+          <Field label="Description" value={f.description||""} onChange={function(v){setF(Object.assign({},f,{description:v}));}} rows={2}/>
         </div>
 
         {/* Summary cards */}
-        <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-          {[
-            ["Members",members.length,C.accent,C.accentSoft],
-            ["Total Revenue",pkr(totalRevenue),C.accent,"#f0fdf4"],
-            ["Total Paid",pkr(totalPaid),C.accent,"#dcfce7"],
-            ["Unpaid",pkr(totalUnpaid),C.red,"#fee2e2"],
-            ["Expenses",pkr(totalExpenses),C.gold,"#fffbeb"],
-            ["Net Profit",pkr(netProfit),netProfit>=0?C.gold:C.red,netProfit>=0?"#fffbeb":"#fee2e2"],
-            ["Visa OK",approvedVisa+"/"+(approvedVisa+refusedVisa),C.accent,"#dcfce7"],
-          ].map(function(s){return(
-            <div key={s[0]} style={{flex:1,minWidth:90,background:s[3],border:"1px solid "+C.border,borderRadius:9,padding:"8px 10px",textAlign:"center"}}>
-              <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{s[0]}</div>
-              <div style={{color:s[2],fontWeight:900,fontSize:14}}>{s[1]}</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+          {[["Members",members.length,C.accent],["Revenue",pkr(totalRevenue),C.accent],["Paid",pkr(totalPaid),C.accent],["Unpaid",pkr(totalUnpaid),C.red],["Expenses",pkr(totalExpenses),C.gold],["Profit",pkr(netProfit),netProfit>=0?C.gold:C.red],["Visa OK",approvedVisa,C.accent]].map(function(s){return(
+            <div key={s[0]} style={{flex:1,minWidth:80,background:"#f0fdf4",border:"1px solid "+C.border,borderRadius:8,padding:"7px 8px",textAlign:"center"}}>
+              <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>{s[0]}</div>
+              <div style={{color:s[2],fontWeight:900,fontSize:13}}>{s[1]}</div>
             </div>
           );})}
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-          {/* Add member */}
-          <div style={{background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:12,padding:14}}>
-            <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:10}}>👥 Add Member</div>
-            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
-              <input value={mName} onChange={function(e){setMName(e.target.value);}} placeholder="Full Name *"
-                style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
-              <div style={{display:"flex",gap:6}}>
-                <input value={mPhone} onChange={function(e){setMPhone(e.target.value);}} placeholder="Phone"
-                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
-                <input value={mPassport} onChange={function(e){setMPassport(e.target.value);}} placeholder="Passport No."
-                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+        {/* Add Member + Expenses */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:10}}>
+          <div style={{background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:10,padding:12}}>
+            <div style={{fontWeight:800,color:C.accent,fontSize:12,marginBottom:8}}>
+              {editIdx!==null?"✏️ Edit Member":"👤 Add Member"}
+              <span style={{fontSize:10,color:C.muted,marginLeft:6}}>(or scan passport below)</span>
+            </div>
+            {/* Passport scan */}
+            <input type="file" id="passportScan" accept="image/*" style={{display:"none"}} onChange={doPassport}/>
+            <button onClick={function(){document.getElementById("passportScan").click();}}
+              style={{width:"100%",background:"#fbbf24",color:"#fff",border:"none",borderRadius:7,padding:"6px 0",cursor:"pointer",fontWeight:700,fontSize:11,marginBottom:6}}>
+              📷 Scan Passport (Auto-fill)
+            </button>
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              <div style={{display:"flex",gap:5}}>
+                <input value={mFirst} onChange={function(e){setMFirst(e.target.value);}} placeholder="First Name *"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+                <input value={mLast} onChange={function(e){setMLast(e.target.value);}} placeholder="Surname"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
               </div>
-              <div style={{display:"flex",gap:6}}>
-                <select value={mVisaStatus} onChange={function(e){setMVisaStatus(e.target.value);}}
-                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}>
+              <div style={{display:"flex",gap:5}}>
+                <input value={mPhone} onChange={function(e){setMPhone(e.target.value);}} placeholder="Phone"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+                <input value={mPassport} onChange={function(e){setMPassport(e.target.value);}} placeholder="Passport No"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+              </div>
+              <div style={{display:"flex",gap:5}}>
+                <input value={mDob} onChange={function(e){setMDob(e.target.value);}} placeholder="DOB (DD/MM/YYYY)"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+                <input value={mExpiry} onChange={function(e){setMExpiry(e.target.value);}} placeholder="Expiry (DD/MM/YYYY)"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+              </div>
+              <div style={{display:"flex",gap:5}}>
+                <input value={mNat} onChange={function(e){setMNat(e.target.value);}} placeholder="Nationality"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+                <input value={mRef} onChange={function(e){setMRef(e.target.value);}} placeholder="Reference"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+              </div>
+              <input value={mDesc} onChange={function(e){setMDesc(e.target.value);}} placeholder="Description / Notes"
+                style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+              <input value={mPrice} onChange={function(e){setMPrice(e.target.value);}} placeholder={"Price (default: "+pkr(f.pricePerPerson||0)+")"} type="number"
+                style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+              <div style={{display:"flex",gap:5}}>
+                <select value={mVisa} onChange={function(e){setMVisa(e.target.value);}}
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}>
                   <option>Pending</option><option>Applied</option><option>Approved</option><option>Refused</option>
                 </select>
                 <select value={mPaid} onChange={function(e){setMPaid(e.target.value);}}
-                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}>
-                  <option>Unpaid</option><option>Paid</option><option>Partial</option>
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}>
+                  <option>Unpaid</option><option>Partial</option><option>Paid</option>
                 </select>
               </div>
-              <button onClick={addMember} style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"8px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>+ Add Member</button>
+              <button onClick={addMember}
+                style={{background:editIdx!==null?C.gold:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"8px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                {editIdx!==null?"💾 Update Member":"+ Add Member"}
+              </button>
+              {editIdx!==null&&<button onClick={clearMember}
+                style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:6,padding:"5px 0",cursor:"pointer",fontWeight:700,fontSize:11}}>
+                Cancel Edit
+              </button>}
             </div>
           </div>
 
-          {/* Add expense */}
-          <div style={{background:"#fef9f0",border:"1.5px solid #fde68a",borderRadius:12,padding:14}}>
-            <div style={{fontWeight:800,color:C.gold,fontSize:12,marginBottom:10}}>💸 Group Expenses</div>
-            <div style={{display:"flex",gap:6,marginBottom:8}}>
-              <input value={eDesc} onChange={function(e){setEDesc(e.target.value);}} placeholder="Description"
-                style={{flex:2,background:"#fff",border:"1.5px solid #fde68a",borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
-              <input value={eAmt} onChange={function(e){setEAmt(e.target.value);}} placeholder="Amount" type="number"
-                style={{flex:1,background:"#fff",border:"1.5px solid #fde68a",borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
-              <button onClick={addExpense} style={{background:C.gold,color:"#fff",border:"none",borderRadius:7,padding:"7px 10px",cursor:"pointer",fontWeight:700}}>+</button>
-            </div>
-            {expenses.map(function(e,i){return(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #fde68a",fontSize:12}}>
-                <span>{e.desc}</span>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                  <span style={{color:C.red,fontWeight:700}}>{pkr(e.amount)}</span>
-                  <button onClick={function(){setF(Object.assign({},f,{expenses:expenses.filter(function(_,j){return j!==i;})}));}}
-                    style={{background:C.redBg,border:"none",color:C.red,borderRadius:4,padding:"1px 6px",cursor:"pointer",fontSize:10}}>x</button>
-                </div>
-              </div>
-            );})}
-            <div style={{display:"flex",justifyContent:"space-between",fontWeight:800,color:C.red,marginTop:8,fontSize:12}}>
-              <span>Total</span><span>{pkr(totalExpenses)}</span>
-            </div>
+          {/* Expenses */}
+          <div style={{background:"#fef9f0",border:"1.5px solid #fde68a",borderRadius:10,padding:12}}>
+            <div style={{fontWeight:800,color:C.gold,fontSize:12,marginBottom:8}}>💸 Group Expenses</div>
+            <ExpenseAdder expenses={expenses} totalExpenses={totalExpenses}
+              onAdd={function(desc,amt){setF(Object.assign({},f,{expenses:expenses.concat([{desc:desc,amount:Number(amt)}])}));}}
+              onRemove={function(i){setF(Object.assign({},f,{expenses:expenses.filter(function(_,j){return j!==i;})}));}}
+            />
           </div>
+        </div>
+
+        {/* Partners optional */}
+        <div style={{marginBottom:10}}>
+          <button onClick={function(){setShowPart(!showPart);}}
+            style={{background:showPart?C.accentSoft:"#f9fafb",border:"1.5px solid "+C.border,borderRadius:8,padding:"7px 14px",cursor:"pointer",fontWeight:700,fontSize:11,color:C.accent,width:"100%",textAlign:"left"}}>
+            🤝 {showPart?"Hide":"+ Add"} Partners (Optional)
+          </button>
+          {showPart&&(
+            <div style={{background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:10,padding:12,marginTop:6}}>
+              <div style={{display:"flex",gap:6,marginBottom:8}}>
+                <input value={gpName} onChange={function(e){setGpName(e.target.value);}} placeholder="Partner name"
+                  style={{flex:2,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+                <input value={gpAmt} onChange={function(e){setGpAmt(e.target.value);}} placeholder="Amount" type="number"
+                  style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:11,outline:"none"}}/>
+                <button onClick={function(){if(!gpName)return;setF(Object.assign({},f,{partners:gPartners.concat([{name:gpName,amount:Number(gpAmt||0)}])}));setGpName("");setGpAmt("");}}
+                  style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"6px 8px",cursor:"pointer",fontWeight:700}}>+</button>
+              </div>
+              {gPartners.map(function(p,pi){
+                var vnd=totalRevenue-totalExpenses-totalInvested;
+                var share=gPartners.length>0?Math.round(vnd/gPartners.length):0;
+                return(
+                  <div key={pi} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid "+C.border,fontSize:12}}>
+                    <span style={{fontWeight:600}}>{p.name}</span>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <span style={{color:C.muted,fontSize:11}}>{pkr(p.amount)} + {pkr(share)} = </span>
+                      <span style={{color:C.accent,fontWeight:700}}>{pkr(Number(p.amount)+share)}</span>
+                      <button onClick={function(){setF(Object.assign({},f,{partners:gPartners.filter(function(_,j){return j!==pi;})}));}}
+                        style={{background:C.redBg,border:"none",color:C.red,borderRadius:4,padding:"1px 5px",cursor:"pointer",fontSize:10}}>x</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Members table */}
         {members.length>0&&(
-          <div style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:12,overflow:"auto",marginBottom:14}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:600}}>
+          <div style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:10,overflow:"auto",marginBottom:10}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:700}}>
               <thead><tr style={{background:C.accentSoft}}>
-                {["#","Name","Phone","Passport","Visa Status","Payment",""].map(function(h){return <th key={h} style={{padding:"8px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;})}
+                {["#","First Name","Surname","Phone","Passport","DOB","Expiry","Nationality","Ref","Visa","Payment","Price",""].map(function(h){
+                  return <th key={h} style={{padding:"7px 8px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;
+                })}
               </tr></thead>
               <tbody>
                 {members.map(function(m,i){return(
-                  <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
-                    <td style={{padding:"7px 10px",color:C.muted,fontSize:11}}>{i+1}</td>
-                    <td style={{padding:"7px 10px",fontWeight:700}}>{m.name}</td>
-                    <td style={{padding:"7px 10px",fontSize:11}}>{m.phone||"--"}</td>
-                    <td style={{padding:"7px 10px",fontSize:11,fontFamily:"monospace"}}>{m.passport||"--"}</td>
-                    <td style={{padding:"7px 10px"}}>
-                      <select value={m.visaStatus||"Pending"} onChange={function(e){updateMember(i,"visaStatus",e.target.value);}}
-                        style={{background:m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3",border:"none",borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:m.visaStatus==="Approved"?C.accent:m.visaStatus==="Refused"?C.red:"#a16207",outline:"none",cursor:"pointer"}}>
+                  <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#f0fdf4"}}>
+                    <td style={{padding:"6px 8px",color:C.muted}}>{i+1}</td>
+                    <td style={{padding:"6px 8px",fontWeight:700}}>{m.firstName||m.name}</td>
+                    <td style={{padding:"6px 8px",color:C.muted}}>{m.surname||"--"}</td>
+                    <td style={{padding:"6px 8px",fontSize:10}}>{m.phone||"--"}</td>
+                    <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10}}>{m.passport||"--"}</td>
+                    <td style={{padding:"6px 8px",fontSize:10}}>{m.dob||"--"}</td>
+                    <td style={{padding:"6px 8px",fontSize:10,color:m.expiry?"#374151":C.muted}}>{m.expiry||"--"}</td>
+                    <td style={{padding:"6px 8px",fontSize:10}}>{m.nationality||"--"}</td>
+                    <td style={{padding:"6px 8px",fontSize:10,color:C.muted}}>{m.reference||"--"}</td>
+                    <td style={{padding:"6px 8px"}}>
+                      <select value={m.visaStatus||"Pending"} onChange={function(e){updateMem(i,"visaStatus",e.target.value);}}
+                        style={{background:m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3",border:"none",borderRadius:5,padding:"2px 5px",fontSize:9,fontWeight:700,color:m.visaStatus==="Approved"?C.accent:m.visaStatus==="Refused"?C.red:"#a16207",outline:"none",cursor:"pointer"}}>
                         <option>Pending</option><option>Applied</option><option>Approved</option><option>Refused</option>
                       </select>
                     </td>
-                    <td style={{padding:"7px 10px"}}>
-                      <select value={m.paid||"Unpaid"} onChange={function(e){updateMember(i,"paid",e.target.value);}}
-                        style={{background:m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2",border:"none",borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:m.paid==="Paid"?C.accent:m.paid==="Partial"?"#a16207":C.red,outline:"none",cursor:"pointer"}}>
+                    <td style={{padding:"6px 8px"}}>
+                      <select value={m.paid||"Unpaid"} onChange={function(e){updateMem(i,"paid",e.target.value);}}
+                        style={{background:m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2",border:"none",borderRadius:5,padding:"2px 5px",fontSize:9,fontWeight:700,color:m.paid==="Paid"?C.accent:m.paid==="Partial"?"#a16207":C.red,outline:"none",cursor:"pointer"}}>
                         <option>Unpaid</option><option>Partial</option><option>Paid</option>
                       </select>
                     </td>
-                    <td style={{padding:"7px 10px"}}>
-                      <button onClick={function(){removeMember(i);}} style={{background:C.redBg,border:"none",color:C.red,borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10}}>x</button>
+                    <td style={{padding:"6px 8px",fontWeight:700,color:C.accent,fontSize:11}}>{pkr(m.price||f.pricePerPerson||0)}</td>
+                    <td style={{padding:"6px 8px"}}>
+                      <div style={{display:"flex",gap:3}}>
+                        <button onClick={function(){editMem(i);}} style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:4,padding:"2px 5px",cursor:"pointer",fontSize:9,fontWeight:700}}>Edit</button>
+                        <button onClick={function(){setF(Object.assign({},f,{members:members.filter(function(_,j){return j!==i;})}));}} style={{background:C.redBg,border:"none",color:C.red,borderRadius:4,padding:"2px 5px",cursor:"pointer",fontSize:9}}>Del</button>
+                      </div>
                     </td>
                   </tr>
                 );})}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* OCR Modal */}
+        {showOCR&&passImg&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}>
+            <div style={{background:"#fff",borderRadius:14,padding:20,width:480,maxWidth:"95vw",maxHeight:"90vh",overflowY:"auto"}}>
+              <div style={{fontWeight:800,color:C.accent,fontSize:14,marginBottom:10}}>📷 Passport Scan</div>
+              <img src={passImg} style={{width:"100%",borderRadius:8,marginBottom:10,border:"1px solid "+C.border}} alt="passport"/>
+              {ocrBusy&&<div style={{textAlign:"center",color:C.accent,fontWeight:700,marginBottom:10}}>🔍 Reading... please wait</div>}
+              <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:12}}>
+                <div style={{display:"flex",gap:6}}>
+                  <div style={{flex:1}}>
+                    <label style={{display:"block",color:C.accent,fontSize:9,fontWeight:700,marginBottom:2,textTransform:"uppercase"}}>First Name</label>
+                    <input value={mFirst} onChange={function(e){setMFirst(e.target.value);}} style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:6,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label style={{display:"block",color:C.accent,fontSize:9,fontWeight:700,marginBottom:2,textTransform:"uppercase"}}>Surname</label>
+                    <input value={mLast} onChange={function(e){setMLast(e.target.value);}} style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:6,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <div style={{flex:1}}>
+                    <label style={{display:"block",color:C.accent,fontSize:9,fontWeight:700,marginBottom:2,textTransform:"uppercase"}}>Passport No</label>
+                    <input value={mPassport} onChange={function(e){setMPassport(e.target.value);}} style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:6,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label style={{display:"block",color:C.accent,fontSize:9,fontWeight:700,marginBottom:2,textTransform:"uppercase"}}>Nationality</label>
+                    <input value={mNat} onChange={function(e){setMNat(e.target.value);}} style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:6,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <div style={{flex:1}}>
+                    <label style={{display:"block",color:C.accent,fontSize:9,fontWeight:700,marginBottom:2,textTransform:"uppercase"}}>Date of Birth</label>
+                    <input value={mDob} onChange={function(e){setMDob(e.target.value);}} style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:6,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                  <div style={{flex:1}}>
+                    <label style={{display:"block",color:C.accent,fontSize:9,fontWeight:700,marginBottom:2,textTransform:"uppercase"}}>Expiry Date</label>
+                    <input value={mExpiry} onChange={function(e){setMExpiry(e.target.value);}} style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:6,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+                  </div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={function(){setShowOCR(false);setPassImg(null);}}
+                  style={{flex:2,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
+                  ✅ Use This Data
+                </button>
+                <button onClick={function(){setShowOCR(false);setPassImg(null);setMFirst("");setMLast("");setMPassport("");setMDob("");setMExpiry("");setMNat("");}}
+                  style={{flex:1,background:C.redBg,color:C.red,border:"1px solid #fecaca",borderRadius:8,padding:"10px 0",fontWeight:700,cursor:"pointer"}}>
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1301,45 +1854,45 @@ function GroupsTab(props){
           style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>+ New Group</button>
       </div>
 
-      {/* Summary stats */}
       <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-        {[["Total Groups",groups.length,C.accent],["Active",groups.filter(function(g){return g.status==="Active";}).length,"#1d4ed8"],["Completed",groups.filter(function(g){return g.status==="Completed";}).length,C.accent],["Total Members",groups.reduce(function(s,g){return s+(Array.isArray(g.members)?g.members.length:0);},0),"#7c3aed"]].map(function(s){return(
-          <div key={s[0]} style={{flex:1,minWidth:100,background:"#fff",border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 14px",textAlign:"center",boxShadow:C.shadow}}>
+        {[["Total Groups",groups.length,C.accent],["Active",groups.filter(function(g){return g.status==="Active";}).length,"#1d4ed8"],["Completed",groups.filter(function(g){return g.status==="Completed";}).length,C.accent],["Members",groups.reduce(function(s,g){return s+(Array.isArray(g.members)?g.members.length:0);},0),"#7c3aed"]].map(function(s){return(
+          <div key={s[0]} style={{flex:1,minWidth:100,background:"#fff",border:"1.5px solid "+C.border,borderRadius:12,padding:"12px",textAlign:"center",boxShadow:C.shadow}}>
             <div style={{color:C.muted,fontSize:9,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{s[0]}</div>
             <div style={{color:s[2],fontWeight:900,fontSize:20}}>{s[1]}</div>
           </div>
         );})}
       </div>
 
-      {/* Groups cards */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:12}}>
         {groups.map(function(g){
-          var sc=statusColors[g.status]||{bg:"#f1f5f9",c:"#475569"};
+          var sc=statusC[g.status]||{bg:"#f1f5f9",c:"#475569"};
           var mems=Array.isArray(g.members)?g.members:[];
           var exps=Array.isArray(g.expenses)?g.expenses:[];
-          var rev=mems.length*Number(g.pricePerPerson||0);
+          var rev=mems.reduce(function(s,m){return s+Number(m.price||g.pricePerPerson||0);},0);
           var exp=exps.reduce(function(s,e){return s+Number(e.amount||0);},0);
           var approved=mems.filter(function(m){return m.visaStatus==="Approved";}).length;
           var paid=mems.filter(function(m){return m.paid==="Paid";}).length;
           return(
-            <div key={g.id} style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:14,padding:16,boxShadow:C.shadow}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+            <div key={g.id} style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:14,padding:14,boxShadow:C.shadow}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                 <div>
-                  <div style={{fontWeight:800,fontSize:15}}>{g.name}</div>
-                  <div style={{color:C.muted,fontSize:11,marginTop:2}}>✈️ {g.destination}</div>
-                  {g.departDate&&<div style={{color:C.muted,fontSize:10}}>🗓 {g.departDate}{g.returnDate?" → "+g.returnDate:""}</div>}
+                  <div style={{fontWeight:800,fontSize:14}}>{g.name}</div>
+                  <div style={{color:C.muted,fontSize:11}}>✈️ {g.destination}</div>
+                  {g.groupType&&<span style={{background:"#dbeafe",color:"#1d4ed8",padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700}}>{g.groupType}{g.organization?" · "+g.organization:""}</span>}
+                  {g.departDate&&<div style={{color:C.muted,fontSize:10,marginTop:2}}>{g.departDate}{g.returnDate?" → "+g.returnDate:""}</div>}
                 </div>
-                <span style={{background:sc.bg,color:sc.c,padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700}}>{g.status}</span>
+                <span style={{background:sc.bg,color:sc.c,padding:"3px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{g.status}</span>
               </div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
-                <span style={{background:C.accentSoft,color:C.accent,padding:"3px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>👥 {mems.length} members</span>
-                <span style={{background:"#dcfce7",color:C.accent,padding:"3px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>✅ Visa: {approved}/{mems.length}</span>
-                <span style={{background:"#dbeafe",color:"#1d4ed8",padding:"3px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>💰 Paid: {paid}/{mems.length}</span>
+              {g.description&&<div style={{background:C.accentSoft,borderRadius:6,padding:"4px 8px",marginBottom:6,fontSize:11}}>{g.description}</div>}
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                <span style={{background:C.accentSoft,color:C.accent,padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700}}>👥 {mems.length}</span>
+                <span style={{background:"#dcfce7",color:C.accent,padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700}}>✅ Visa {approved}/{mems.length}</span>
+                <span style={{background:"#dbeafe",color:"#1d4ed8",padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700}}>💰 Paid {paid}/{mems.length}</span>
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:10,padding:"8px 0",borderTop:"1px solid "+C.border}}>
-                <span style={{color:C.muted}}>Revenue: <b style={{color:C.accent}}>{pkr(rev)}</b></span>
-                <span style={{color:C.muted}}>Expenses: <b style={{color:C.red}}>{pkr(exp)}</b></span>
-                <span style={{color:C.muted}}>Profit: <b style={{color:(rev-exp)>=0?C.gold:C.red}}>{pkr(rev-exp)}</b></span>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:8,padding:"6px 0",borderTop:"1px solid "+C.border}}>
+                <span>Rev: <b style={{color:C.accent}}>{pkr(rev)}</b></span>
+                <span>Exp: <b style={{color:C.red}}>{pkr(exp)}</b></span>
+                <span>Profit: <b style={{color:(rev-exp)>=0?C.gold:C.red}}>{pkr(rev-exp)}</b></span>
               </div>
               <div style={{display:"flex",gap:6}}>
                 <button onClick={function(){setViewG(g);}} style={{flex:1,background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>View</button>
@@ -1349,47 +1902,72 @@ function GroupsTab(props){
             </div>
           );
         })}
-        {groups.length===0&&<div style={{gridColumn:"1/-1",padding:"30px 0",textAlign:"center",color:C.muted}}>Koi group nahi — + New Group se add karein</div>}
+        {groups.length===0&&<div style={{gridColumn:"1/-1",padding:"30px",textAlign:"center",color:C.muted}}>Koi group nahi — + New Group se add karein</div>}
       </div>
 
       {showForm&&<GroupForm g={editG} isNew={!editG} onSave={saveG} onClose={function(){setShowForm(false);setEditG(null);}}/>}
+
       {viewG&&(
         <Modal title={"Group: "+viewG.name} onClose={function(){setViewG(null);}} wide={true}>
-          <div style={{marginBottom:10,display:"flex",gap:8,flexWrap:"wrap"}}>
-            {[["Destination",viewG.destination||"--"],["Depart",viewG.departDate||"--"],["Return",viewG.returnDate||"--"],["Status",viewG.status],["Price/Person",pkr(viewG.pricePerPerson||0)]].map(function(r){return(
-              <div key={r[0]} style={{background:C.accentSoft,borderRadius:8,padding:"6px 12px",fontSize:12}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+            {[["Destination",viewG.destination||"--"],["Depart",viewG.departDate||"--"],["Return",viewG.returnDate||"--"],["Type",viewG.groupType||"--"],["Org",viewG.organization||"--"],["Status",viewG.status]].map(function(r){return(
+              <div key={r[0]} style={{background:C.accentSoft,borderRadius:8,padding:"6px 10px",fontSize:12}}>
                 <div style={{color:C.muted,fontSize:9,fontWeight:700}}>{r[0]}</div>
                 <div style={{fontWeight:700}}>{r[1]}</div>
               </div>
             );})}
           </div>
-          <div style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:12,overflow:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:500}}>
+          <div style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:10,overflow:"auto",marginBottom:12}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:600}}>
               <thead><tr style={{background:C.accentSoft}}>
-                {["#","Name","Phone","Passport","Visa","Payment"].map(function(h){return <th key={h} style={{padding:"8px 10px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;})}
+                {["#","First Name","Surname","Phone","Passport","DOB","Expiry","Nationality","Visa","Payment"].map(function(h){
+                  return <th key={h} style={{padding:"7px 8px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:9,textTransform:"uppercase"}}>{h}</th>;
+                })}
               </tr></thead>
               <tbody>
                 {(Array.isArray(viewG.members)?viewG.members:[]).map(function(m,i){return(
-                  <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
-                    <td style={{padding:"7px 10px",color:C.muted}}>{i+1}</td>
-                    <td style={{padding:"7px 10px",fontWeight:700}}>{m.name}</td>
-                    <td style={{padding:"7px 10px",fontSize:11}}>{m.phone||"--"}</td>
-                    <td style={{padding:"7px 10px",fontSize:11,fontFamily:"monospace"}}>{m.passport||"--"}</td>
-                    <td style={{padding:"7px 10px"}}>
-                      <span style={{background:m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3",color:m.visaStatus==="Approved"?C.accent:m.visaStatus==="Refused"?C.red:"#a16207",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{m.visaStatus||"Pending"}</span>
+                  <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#f0fdf4"}}>
+                    <td style={{padding:"6px 8px",color:C.muted}}>{i+1}</td>
+                    <td style={{padding:"6px 8px",fontWeight:700}}>{m.firstName||m.name}</td>
+                    <td style={{padding:"6px 8px",color:C.muted}}>{m.surname||"--"}</td>
+                    <td style={{padding:"6px 8px"}}>{m.phone||"--"}</td>
+                    <td style={{padding:"6px 8px",fontFamily:"monospace"}}>{m.passport||"--"}</td>
+                    <td style={{padding:"6px 8px"}}>{m.dob||"--"}</td>
+                    <td style={{padding:"6px 8px"}}>{m.expiry||"--"}</td>
+                    <td style={{padding:"6px 8px"}}>{m.nationality||"--"}</td>
+                    <td style={{padding:"6px 8px"}}>
+                      <span style={{background:m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3",color:m.visaStatus==="Approved"?C.accent:m.visaStatus==="Refused"?C.red:"#a16207",padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700}}>{m.visaStatus||"Pending"}</span>
                     </td>
-                    <td style={{padding:"7px 10px"}}>
-                      <span style={{background:m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2",color:m.paid==="Paid"?C.accent:m.paid==="Partial"?"#a16207":C.red,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{m.paid||"Unpaid"}</span>
+                    <td style={{padding:"6px 8px"}}>
+                      <span style={{background:m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2",color:m.paid==="Paid"?C.accent:m.paid==="Partial"?"#a16207":C.red,padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700}}>{m.paid||"Unpaid"}</span>
                     </td>
                   </tr>
                 );})}
               </tbody>
             </table>
           </div>
-          <button onClick={function(){setEditG(viewG);setShowForm(true);setViewG(null);}}
-            style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13,marginTop:12}}>
-            ✏️ Edit Group
-          </button>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={function(){
+              var mems=Array.isArray(viewG.members)?viewG.members:[];
+              var exps=Array.isArray(viewG.expenses)?viewG.expenses:[];
+              var rev=mems.reduce(function(s,m){return s+Number(m.price||viewG.pricePerPerson||0);},0);
+              var exp=exps.reduce(function(s,e){return s+Number(e.amount||0);},0);
+              var rows=mems.map(function(m,i){return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+(i+1)+"</td><td style='font-weight:700'>"+(m.firstName||m.name)+"</td><td>"+(m.surname||"")+"</td><td>"+(m.phone||"")+"</td><td style='font-family:monospace'>"+(m.passport||"")+"</td><td>"+(m.dob||"")+"</td><td>"+(m.expiry||"")+"</td><td>"+(m.nationality||"")+"</td><td><span style='background:"+(m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3")+";padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700'>"+(m.visaStatus||"Pending")+"</span></td><td><span style='background:"+(m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2")+";padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700'>"+(m.paid||"Unpaid")+"</span></td></tr>";}).join("");
+              var html="<!DOCTYPE html><html><head><title>"+viewG.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:20px}.title{font-size:20px;font-weight:900;color:#16a34a;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:12px}.cards{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;text-align:center;min-width:80px}.cl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase}.cv{font-size:14px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+              +"<div class='title'>"+viewG.name+"</div>"
+              +"<div class='sub'>"+[viewG.destination,viewG.groupType,viewG.organization,viewG.departDate&&(viewG.departDate+(viewG.returnDate?" → "+viewG.returnDate:""))].filter(Boolean).join(" | ")+"</div>"
+              +"<div class='cards'><div class='card'><div class='cl'>Members</div><div class='cv'>"+mems.length+"</div></div><div class='card'><div class='cl'>Revenue</div><div class='cv'>"+pkr(rev)+"</div></div><div class='card'><div class='cl'>Expenses</div><div class='cv' style='color:#dc2626'>"+pkr(exp)+"</div></div><div class='card'><div class='cl'>Profit</div><div class='cv'>"+pkr(rev-exp)+"</div></div></div>"
+              +"<table><tr><th>#</th><th>First Name</th><th>Surname</th><th>Phone</th><th>Passport</th><th>DOB</th><th>Expiry</th><th>Nationality</th><th>Visa</th><th>Payment</th></tr>"+rows+"</table>"
+              +"<div class='foot'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
+              var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+            }} style={{flex:1,background:"#0284c7",color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
+              🖨️ Print
+            </button>
+            <button onClick={function(){setEditG(viewG);setShowForm(true);setViewG(null);}}
+              style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
+              ✏️ Edit
+            </button>
+          </div>
         </Modal>
       )}
     </div>
@@ -1413,7 +1991,13 @@ function QueriesTab(props){
     var matchStatus=filterStatus==="all"||q.status===filterStatus;
     var matchSearch=!search||[q.name,q.phone,q.destination,q.email].join(" ").toLowerCase().includes(search.toLowerCase());
     return matchStatus&&matchSearch;
-  }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  }).sort(function(a,b2){
+    // Closed/Lost at bottom, active on top, newest first within each group
+    var ac=a.status==="Closed"||a.status==="Lost"?1:0;
+    var bc=b2.status==="Closed"||b2.status==="Lost"?1:0;
+    if(ac!==bc) return ac-bc;
+    return new Date(b2.date)-new Date(a.date);
+  });
 
   function saveQ(q){
     var updated=editQ?queries.map(function(x){return x.id===q.id?q:x;}):queries.concat([q]);
@@ -1559,6 +2143,7 @@ export default function App(){
   });
   var [personal,setPersonalR]=useState(function(){return ld("olympia_personal",[]);});
   var [groups,setGroupsR]=useState(function(){var d=ld("olympia_groups",[]); return Array.isArray(d)?d:[];});
+  var [udhar,setUdharR]=useState(function(){var d=ld("olympia_udhar",[]); return Array.isArray(d)?d:[];});
   var [queries,setQueriesR]=useState(function(){
     var d=ld("olympia_queries",[]);
     return Array.isArray(d)?d:[];
@@ -1608,6 +2193,7 @@ export default function App(){
         {fb:"olympia_personal",  setter:setPersonalR, lk:"olympia_personal",  getter:function(){return ld("olympia_personal",[]);}},
         {fb:"olympia_queries",   setter:setQueriesR,  lk:"olympia_queries",   getter:function(){return ld("olympia_queries",[]);}},
         {fb:"olympia_groups",    setter:setGroupsR,   lk:"olympia_groups",    getter:function(){return ld("olympia_groups",[]);}},
+        {fb:"olympia_udhar",     setter:setUdharR,    lk:"olympia_udhar",     getter:function(){return ld("olympia_udhar",[]);}},
       ];
 
       keys.forEach(function(kv){
@@ -1643,6 +2229,10 @@ export default function App(){
     var arr=Array.isArray(d)?d:[];
     setGroupsR(arr);sv("olympia_groups",arr);fbSave("olympia_groups",arr);showToast();
   }
+  function setUdhar(d){
+    var arr=Array.isArray(d)?d:[];
+    setUdharR(arr);sv("olympia_udhar",arr);fbSave("olympia_udhar",arr);showToast();
+  }
   function setPersonal(d){
     setPersonalR(d);
     sv("olympia_personal",d);
@@ -1661,7 +2251,7 @@ export default function App(){
   var [bMo,setBMo]=useState(new Date().getMonth());
   var [bYr,setBYr]=useState(new Date().getFullYear());
 
-  var eb={customer:"",destination:"",date:"",amount:"",cost:"",commission:"",status:"Pending",workStatus:"In Process",visaStatus:"",type:"Flight Only",account:"Bank Alfalah",notes:"",reference:""};
+  var eb={customer:"",destination:"",date:"",amount:"",cost:"",commission:"",paidAmount:"",status:"Pending",workStatus:"In Process",visaStatus:"",type:"Flight Only",account:"Bank Alfalah",notes:"",description:"",reference:""};
   var [showBF,setShowBF]=useState(false);var [bf,setBf]=useState(eb);
   var ec={name:"",phone:"",email:"",city:"",passport:"",notes:"",reference:"",source:"PR"};
   var [showCF,setShowCF]=useState(false);var [cf,setCf]=useState(ec);
@@ -1691,35 +2281,37 @@ export default function App(){
   var [bSortDir,setBSortDir]=useState("smart");
   var fBFiltered=useMemo(function(){
     return fB.filter(function(b){
+      // Period filter
       if(bMode!=="all"){
         if(!b.date)return false;
         var d=new Date(b.date);
         if(bMode==="year"&&d.getFullYear()!==bYr)return false;
         if(bMode==="month"&&!(d.getMonth()===bMo&&d.getFullYear()===bYr))return false;
       }
+      // Payment filter
       if(bPayFilter==="paid"&&b.status!=="Paid")return false;
       if(bPayFilter==="unpaid"&&b.status==="Paid")return false;
-      if(bStatusFilter==="In Process"&&(b.workStatus||"In Process")!=="In Process")return false;
-      if(bStatusFilter==="Closed"&&b.workStatus!=="Closed")return false;
+      // Status filter
+      if(bStatusFilter!=="all"&&b.workStatus!==bStatusFilter)return false;
       return true;
     }).sort(function(a,b2){
-      if(bSortDir==="smart"){
-        // Priority score: lower = top
+      if(bSortDir==="smart"||bSortDir==="desc"){
+        // Smart: score based on completion
         function score(b){
           var isPaid=b.status==="Paid";
-          var isClosed=(b.workStatus||"In Process")==="Closed";
-          if(!isPaid&&!isClosed) return 0; // Active unpaid+inprocess = TOP
-          if(!isPaid&&isClosed)  return 1; // Unpaid but closed
-          if(isPaid&&!isClosed)  return 2; // Paid but still in process
-          return 3;                         // Paid + Closed = BOTTOM
+          var visaDone=b.visaStatus==="Approved"||b.visaStatus==="Refused";
+          var isClosed=b.workStatus==="Closed";
+          if(isPaid&&(isClosed||visaDone)) return 3; // ALL done = BOTTOM
+          if(isPaid&&!isClosed&&!visaDone) return 2;  // Paid but work going
+          if(!isPaid&&(isClosed||visaDone)) return 1;  // Unpaid but closed
+          return 0; // Unpaid + In Process = TOP
         }
-        var sa=score(a), sb=score(b2);
+        var sa=score(a),sb=score(b2);
         if(sa!==sb) return sa-sb;
-        // Within same group: newest first
         return new Date(b2.date||0)-new Date(a.date||0);
       }
-      var da=new Date(a.date||0), db=new Date(b2.date||0);
-      return bSortDir==="desc"?db-da:da-db;
+      var da=new Date(a.date||0),db=new Date(b2.date||0);
+      return bSortDir==="asc"?da-db:db-da;
     });
   },[fB,bMode,bMo,bYr,bStatusFilter,bPayFilter,bSortDir]);
 
@@ -1739,7 +2331,7 @@ export default function App(){
     {id:"dashboard",l:"Dashboard"},{id:"bookings",l:"Bookings"},
     {id:"customers",l:"Customers"},{id:"expenses",l:"Expenses"},
     {id:"reports",l:"Reports"},{id:"partners",l:"Partners"},
-    {id:"groups",l:"Groups"},
+    {id:"groups",l:"Groups"},{id:"udhar",l:"Udhar 💰"},
     {id:"personal",l:"My Expenses"},{id:"marketing",l:"Marketing"},
     {id:"queries",l:"Queries"},
   ];
@@ -1752,7 +2344,9 @@ export default function App(){
       <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#14532d,#16a34a)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',Arial,sans-serif"}}>
         <div style={{background:"#fff",borderRadius:18,padding:36,width:340,boxShadow:"0 8px 40px rgba(0,0,0,.2)"}}>
           <div style={{textAlign:"center",marginBottom:24}}>
-            <img src={LOGO_URI} alt="Olympia" style={{height:70,width:"auto",marginBottom:10}}/>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:10}}>
+              <img src={LOGO_URI} alt="Olympia" style={{height:80,width:"auto",display:"block"}}/>
+            </div>
             <div style={{fontWeight:900,fontSize:18,color:C.accent}}>Olympia Travel & Tours</div>
             <div style={{color:C.muted,fontSize:12}}>Accounts System</div>
           </div>
@@ -1772,11 +2366,7 @@ export default function App(){
           <button onClick={doLogin} style={{width:"100%",background:"linear-gradient(135deg,#14532d,#16a34a)",color:"#fff",border:"none",borderRadius:10,padding:"12px 0",fontWeight:900,cursor:"pointer",fontSize:15}}>
             Login
           </button>
-          <div style={{marginTop:16,background:C.accentSoft,borderRadius:9,padding:"10px 12px",fontSize:11,color:C.muted}}>
-            <div style={{fontWeight:700,color:C.accent,marginBottom:4}}>Access Levels:</div>
-            <div>🔑 Admin — Full Access</div>
-            <div>👤 Staff — Queries + Bookings</div>
-          </div>
+
         </div>
       </div>
     );
@@ -1930,7 +2520,7 @@ export default function App(){
               {bMode!=="all"&&<select value={bYr} onChange={function(e){setBYr(Number(e.target.value));}} style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 9px",fontSize:12,outline:"none"}}>
                 {[2023,2024,2025,2026,2027].map(function(y){return <option key={y}>{y}</option>;})}
               </select>}
-              {/* Sort options */}
+              {/* Sort */}
               <div style={{display:"flex",gap:0,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
                 {[["smart","🔼 Smart"],["desc","📅 Newest"],["asc","📅 Oldest"]].map(function(s){return(
                   <button key={s[0]} onClick={function(){setBSortDir(s[0]);}}
@@ -1972,10 +2562,10 @@ export default function App(){
               </div>
               {/* Work status filter */}
               <div style={{display:"flex",gap:0,background:C.white,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
-                {[["all","All"],["In Process","🔄 In Process"],["Closed","✔ Closed"]].map(function(fl){return(
-                  <button key={fl[0]} onClick={function(){setBStatusFilter(fl[0]);}}
-                    style={{padding:"6px 11px",border:"none",background:bStatusFilter===fl[0]?C.accent:"transparent",color:bStatusFilter===fl[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
-                    {fl[1]}
+                {[["all","All Status"],["In Process","🔄 In Process"],["Closed","✔ Closed"]].map(function(f){return(
+                  <button key={f[0]} onClick={function(){setBStatusFilter(f[0]);}}
+                    style={{padding:"6px 12px",border:"none",background:bStatusFilter===f[0]?C.accent:"transparent",color:bStatusFilter===f[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+                    {f[1]}
                   </button>
                 );})}
               </div>
@@ -1994,38 +2584,33 @@ export default function App(){
 
             <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:14,overflow:"auto",boxShadow:C.shadow}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:900}}>
-                <Th cols={["ID","Customer","Destination","Type","Date","Sale","Cost","Profit","Account","Payment","Work Status","Visa","Actions"]}/>
+                <Th cols={["ID","Customer","Destination","Type","Date","Sale","Cost","Profit","Account","Payment","Status","Actions"]}/>
                 <tbody>
                   {fBFiltered.map(function(b,i){var p=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);return(
-                    <tr key={b.id} style={{borderTop:"1px solid "+C.border,background:b.status==="Paid"&&b.workStatus==="Closed"?"#f8f8f8":i%2===0?"#fff":"#fafffe",opacity:b.status==="Paid"&&b.workStatus==="Closed"?0.65:1}}>
+                    <tr key={b.id} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
                       <td style={{padding:"8px 11px",color:C.muted,fontSize:10,fontWeight:600}}>{b.id}</td>
                       <td style={{padding:"8px 11px",fontWeight:700}}>{b.customer}</td>
                       <td style={{padding:"8px 11px"}}>{b.destination}</td>
                       <td style={{padding:"8px 11px",color:C.muted,fontSize:11}}>{b.type}</td>
                       <td style={{padding:"8px 11px",color:C.muted,fontSize:11}}>{b.date}</td>
-                      <td style={{padding:"8px 11px",color:C.accent,fontWeight:800}}>{pkr(b.amount)}</td>
+                      <td style={{padding:"8px 11px"}}>
+                        <div style={{color:C.accent,fontWeight:800}}>{pkr(b.amount)}</div>
+                        {b.paidAmount&&Number(b.paidAmount)<Number(b.amount)&&(
+                          <div style={{fontSize:9,marginTop:1}}>
+                            <span style={{color:C.accent}}>✓ {pkr(b.paidAmount)}</span>
+                            <span style={{color:C.red,marginLeft:4}}>Bal: {pkr(Number(b.amount)-Number(b.paidAmount))}</span>
+                          </div>
+                        )}
+                      </td>
                       <td style={{padding:"8px 11px",color:C.red,fontSize:11}}>{pkr(b.cost||0)}</td>
                       <td style={{padding:"8px 11px",color:p>=0?C.gold:C.red,fontWeight:700}}>{pkr(p)}</td>
                       <td style={{padding:"8px 11px",fontSize:10,color:C.muted}}>{b.account||"--"}</td>
                       <td style={{padding:"8px 11px"}}><Badge status={b.status}/></td>
                       <td style={{padding:"8px 11px"}}>
-                        <select value={b.workStatus||"In Process"} onChange={function(e){
-                          setB(bookings.map(function(x){return x.id===b.id?Object.assign({},x,{workStatus:e.target.value}):x;}));
-                        }} style={{background:b.workStatus==="Closed"?"#dcfce7":"#eff6ff",border:"1px solid "+(b.workStatus==="Closed"?C.border:"#bfdbfe"),borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:b.workStatus==="Closed"?C.accent:"#1d4ed8",outline:"none",cursor:"pointer"}}>
-                          <option>In Process</option>
-                          <option>Closed</option>
-                        </select>
-                      </td>
-                      <td style={{padding:"8px 11px"}}>
-                        <select value={b.visaStatus||""} onChange={function(e){
-                          setB(bookings.map(function(x){return x.id===b.id?Object.assign({},x,{visaStatus:e.target.value}):x;}));
-                        }} style={{background:b.visaStatus==="Approved"?"#dcfce7":b.visaStatus==="Refused"?"#fee2e2":"#f9fafb",border:"1px solid "+(b.visaStatus==="Approved"?C.border:b.visaStatus==="Refused"?"#fecaca":"#e5e7eb"),borderRadius:6,padding:"3px 6px",fontSize:10,fontWeight:700,color:b.visaStatus==="Approved"?C.accent:b.visaStatus==="Refused"?C.red:C.muted,outline:"none",cursor:"pointer"}}>
-                          <option value="">Visa Status</option>
-                          <option>Approved</option>
-                          <option>Refused</option>
-                          <option>Pending</option>
-                          <option>Applied</option>
-                        </select>
+                        <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                          <span style={{background:b.workStatus==="Closed"?"#dcfce7":"#eff6ff",color:b.workStatus==="Closed"?C.accent:"#1d4ed8",padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,textAlign:"center"}}>{b.workStatus||"In Process"}</span>
+                          {b.visaStatus&&<span style={{background:b.visaStatus==="Approved"?"#dcfce7":b.visaStatus==="Refused"?"#fee2e2":"#fef9c3",color:b.visaStatus==="Approved"?C.accent:b.visaStatus==="Refused"?C.red:"#a16207",padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700,textAlign:"center"}}>{b.visaStatus}</span>}
+                        </div>
                       </td>
                       <td style={{padding:"8px 11px"}}>
                         <div style={{display:"flex",gap:3}}>
@@ -2287,6 +2872,7 @@ export default function App(){
                 {tab==="marketing"&&<Marketing packages={packages} setPackages={setP} customers={customers} showToast={showToast}/>}
         {tab==="queries"&&<QueriesTab queries={queries} setQueries={setQueries} currentUser={currentUser}/>}
         {tab==="groups"&&<GroupsTab groups={groups} setGroups={setGroups} customers={customers}/>}
+        {tab==="udhar"&&<UdharTab udhar={udhar} setUdhar={setUdhar}/>}
       </div>
 
       {invB&&<InvoiceModal b={invB} onClose={function(){setInvB(null);}}/>}
@@ -2296,7 +2882,9 @@ export default function App(){
           <Field label="Customer"    value={edB.customer}    onChange={function(v){setEdB(Object.assign({},edB,{customer:v}));}} half={true}/>
           <Field label="Destination" value={edB.destination} onChange={function(v){setEdB(Object.assign({},edB,{destination:v}));}} half={true}/>
           <Field label="Package"     value={edB.type}        onChange={function(v){setEdB(Object.assign({},edB,{type:v}));}} options={["Flight Only","Hotel Only","Flight + Hotel","Tour Package","Visa Only","Visa + Flight","Umrah Package","Hajj Package","Other"]} half={true}/>
+          <Field label="Amount Received (PKR)" value={edB.paidAmount||""} onChange={function(v){setEdB(Object.assign({},edB,{paidAmount:v}));}} type="number" half={true}/>
           <Field label="Payment"     value={edB.status}      onChange={function(v){setEdB(Object.assign({},edB,{status:v}));}} options={["Paid","Pending","Cancelled"]} half={true}/>
+          <Field label="Description (for client)" value={edB.description||""} onChange={function(v){setEdB(Object.assign({},edB,{description:v}));}} rows={2}/>
           <Field label="Work Status" value={edB.workStatus||"In Process"} onChange={function(v){setEdB(Object.assign({},edB,{workStatus:v}));}} options={["In Process","Closed"]} half={true}/>
           <Field label="Visa Status" value={edB.visaStatus||""} onChange={function(v){setEdB(Object.assign({},edB,{visaStatus:v}));}} options={["","Pending","Applied","Approved","Refused"]} half={true}/>
           <Field label="Date"        value={edB.date}        onChange={function(v){setEdB(Object.assign({},edB,{date:v}));}} type="date" half={true}/>
