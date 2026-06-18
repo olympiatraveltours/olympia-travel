@@ -1723,18 +1723,19 @@ function UdharTab(props){
     var existIdx=people2.findIndex(function(p){return p.name.toLowerCase().trim()===newName.toLowerCase().trim();});
     if(existIdx>=0){
       // Already exists - just open their profile
-      setViewPerson(people2[existIdx]);
+      setSelectedId(people2[existIdx].id);
+      setMode("entry");
       setShowPersonForm(false);
       setNewName("");setNewPhone("");
-      setActiveEntryId(viewPerson?viewPerson.id:null);
+      setMode("entry");
     } else {
       var newP={id:uid("UP"),name:newName.trim(),phone:newPhone.trim(),entries:[]};
       var updated=people2.concat([newP]);
       savePeople(updated);
-      setViewPerson(newP);
+      setSelectedId(newP.id);
+      setMode("entry");
       setShowPersonForm(false);
       setNewName("");setNewPhone("");
-      setActiveEntryId(viewPerson?viewPerson.id:null);
     }
   }
 
@@ -1864,7 +1865,7 @@ function UdharTab(props){
             var bal=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
             return bal>0?(
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #fecaca"}}>
-                <div onClick={function(){setViewPerson(p);}} style={{cursor:"pointer"}}>
+                <div onClick={function(){setSelectedId(p.id);}} style={{cursor:"pointer"}}>
                   <div style={{fontWeight:700,fontSize:12,color:C.red}}>{p.name}</div>
                   {p.phone&&<div style={{color:C.muted,fontSize:10}}>{p.phone}</div>}
                 </div>
@@ -1885,7 +1886,7 @@ function UdharTab(props){
             var bal=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
             return bal>0?(
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+C.border}}>
-                <div onClick={function(){setViewPerson(p);}} style={{cursor:"pointer"}}>
+                <div onClick={function(){setSelectedId(p.id);}} style={{cursor:"pointer"}}>
                   <div style={{fontWeight:700,fontSize:12,color:C.accent}}>{p.name}</div>
                   {p.phone&&<div style={{color:C.muted,fontSize:10}}>{p.phone}</div>}
                 </div>
@@ -2004,7 +2005,7 @@ function UdharTab(props){
                         </div>
                         {e.notes&&<div style={{color:C.muted,fontSize:10,marginTop:3}}>💬 {e.notes}</div>}
                         <div style={{display:"flex",gap:4,marginTop:6}}>
-                          <button onClick={function(){setEditEntry(e);setActiveEntryId(viewPerson?viewPerson.id:null);}}
+                          <button onClick={function(){setEditEntry(e);setMode("entry");}}
                             style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>Edit</button>
                           {e.status!=="Wapas"&&<button onClick={function(){markWapas(p.id,e.id);}}
                             style={{background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>✅ Wapas</button>}
