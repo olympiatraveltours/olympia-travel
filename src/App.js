@@ -1727,7 +1727,6 @@ function UdharTab(props){
       setMode("entry");
       setShowPersonForm(false);
       setNewName("");setNewPhone("");
-      setMode("entry");
     } else {
       var newP={id:uid("UP"),name:newName.trim(),phone:newPhone.trim(),entries:[]};
       var updated=people2.concat([newP]);
@@ -2813,7 +2812,23 @@ export default function App(){
       setLoginErr("");
       setTab(u.role==="admin"?"dashboard":"queries");
     } else {
-      setLoginErr("Galat ID ya Password!");
+      // Try fetching latest from Firebase before showing error
+      setLoginErr("Checking...");
+      fbListen("olympia_users_config",function(fbData){
+        if(fbData&&Array.isArray(fbData.users)){
+          var fu=fbData.users.find(function(x){return x.id===loginId&&x.password===loginPw;});
+          if(fu){
+            setCurrentUser(fu);
+            localStorage.setItem("olympia_user",JSON.stringify(fu));
+            setLoginErr("");
+            setTab(fu.role==="admin"?"dashboard":"queries");
+          } else {
+            setLoginErr("Galat ID ya Password!");
+          }
+        } else {
+          setLoginErr("Galat ID ya Password!");
+        }
+      });
     }
   }
   function doLogout(){
