@@ -1270,6 +1270,167 @@ function ExpenseAdder(props){
 }
 
 
+
+// ─── STAFF EXPENSES TAB ──────────────────────────────────────
+function StaffExpTab(props){
+  var staffExp=Array.isArray(props.staffExp)?props.staffExp:[];
+  var setStaffExp=props.setStaffExp;
+  var currentUser=props.currentUser||{};
+  var expenses=Array.isArray(props.expenses)?props.expenses:[];
+  var setE=props.setE;
+  var isAdmin=currentUser.role==="admin";
+
+  // Staff sees only their own, Admin sees all
+  var visible=isAdmin?staffExp:staffExp.filter(function(e){return e.staffId===currentUser.id;});
+  var sorted=visible.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+
+  var emptyE={id:"",staffId:"",staffName:"",date:new Date().toISOString().split("T")[0],
+    description:"",category:"General",amount:"",notes:""};
+  var [showForm,setShowForm]=useState(false);
+  var [form,setForm]=useState(emptyE);
+
+  var CATS=["General","Transport","Food","Office Supplies","Marketing","Utilities","Other"];
+
+  var totalMine=staffExp.filter(function(e){return e.staffId===currentUser.id;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var totalAll=staffExp.reduce(function(s,e){return s+Number(e.amount||0);},0);
+
+  function saveEntry(){
+    if(!form.description||!form.amount)return;
+    var entry=Object.assign({},form,{
+      id:form.id||uid("SE"),
+      staffId:currentUser.id,
+      staffName:currentUser.name,
+      amount:Number(form.amount)
+    });
+    var updated=form.id?staffExp.map(function(x){return x.id===entry.id?entry:x;}):staffExp.concat([entry]);
+    setStaffExp(updated);
+    // Auto-add to main expenses
+    if(!form.id){
+      var mainExp={
+        id:uid("E"),
+        description:"["+currentUser.name+"] "+entry.description,
+        category:entry.category,
+        date:entry.date,
+        amount:entry.amount,
+        account:"Staff",
+        notes:entry.notes||"",
+        staffRef:entry.id
+      };
+      setE(expenses.concat([mainExp]));
+    }
+    setForm(emptyE);setShowForm(false);
+  }
+
+  function delEntry(id){
+    if(window.confirm("Delete?"))
+      setStaffExp(staffExp.filter(function(x){return x.id!==id;}));
+  }
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <div>
+          <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Staff Expenses</h2>
+          <div style={{color:C.muted,fontSize:11,marginTop:2}}>
+            {isAdmin?"Sab staff ki entries":"Aapki entries — "+currentUser.name}
+          </div>
+        </div>
+        <button onClick={function(){setForm(emptyE);setShowForm(true);}}
+          style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
+          + Add Expense
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        {isAdmin?(
+          <>
+            <div style={{flex:1,background:"#fee2e2",border:"1.5px solid #fecaca",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+              <div style={{color:C.red,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Total All Staff</div>
+              <div style={{color:C.red,fontWeight:900,fontSize:20}}>{pkr(totalAll)}</div>
+              <div style={{color:C.muted,fontSize:10}}>{staffExp.length} entries</div>
+            </div>
+            {/* Per staff breakdown */}
+            {Object.values(staffExp.reduce(function(acc,e){
+              if(!acc[e.staffId]) acc[e.staffId]={name:e.staffName,total:0,count:0};
+              acc[e.staffId].total+=Number(e.amount||0);
+              acc[e.staffId].count++;
+              return acc;
+            },{})).map(function(s,i){return(
+              <div key={i} style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+                <div style={{color:C.accent,fontSize:10,fontWeight:700,marginBottom:3}}>{s.name}</div>
+                <div style={{color:C.accent,fontWeight:900,fontSize:18}}>{pkr(s.total)}</div>
+                <div style={{color:C.muted,fontSize:10}}>{s.count} entries</div>
+              </div>
+            );})}
+          </>
+        ):(
+          <div style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+            <div style={{color:C.accent,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Meri Total Expenses</div>
+            <div style={{color:C.accent,fontWeight:900,fontSize:22}}>{pkr(totalMine)}</div>
+            <div style={{color:C.muted,fontSize:10}}>{staffExp.filter(function(e){return e.staffId===currentUser.id;}).length} entries</div>
+          </div>
+        )}
+      </div>
+
+      {/* Form Modal */}
+      {showForm&&(
+        <Modal title="Staff Expense Entry" onClose={function(){setShowForm(false);}}>
+          <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
+            <Field label="Description" value={form.description} onChange={function(v){setForm(Object.assign({},form,{description:v}));}} />
+            <Field label="Category" value={form.category} onChange={function(v){setForm(Object.assign({},form,{category:v}));}} options={CATS} half={true}/>
+            <Field label="Amount (PKR)" value={form.amount} onChange={function(v){setForm(Object.assign({},form,{amount:v}));}} type="number" half={true}/>
+            <Field label="Date" value={form.date} onChange={function(v){setForm(Object.assign({},form,{date:v}));}} type="date" half={true}/>
+            <Field label="Notes (optional)" value={form.notes||""} onChange={function(v){setForm(Object.assign({},form,{notes:v}));}} rows={2}/>
+          </div>
+          <div style={{background:C.accentSoft,borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:11,color:C.muted}}>
+            ℹ️ Yeh entry automatically main Expenses mein bhi add ho jaayegi
+          </div>
+          <button onClick={saveEntry}
+            style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
+            Save Expense
+          </button>
+        </Modal>
+      )}
+
+      {/* List */}
+      <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:14,overflow:"auto",boxShadow:C.shadow}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:600}}>
+          <thead><tr style={{background:C.accentSoft}}>
+            {(isAdmin?["Date","Staff","Description","Category","Amount","Notes","Actions"]:["Date","Description","Category","Amount","Notes","Actions"]).map(function(h){
+              return <th key={h} style={{padding:"9px 11px",textAlign:"left",color:C.accent,fontWeight:800,fontSize:10,textTransform:"uppercase"}}>{h}</th>;
+            })}
+          </tr></thead>
+          <tbody>
+            {sorted.map(function(e,i){return(
+              <tr key={e.id} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#fafffe"}}>
+                <td style={{padding:"8px 11px",color:C.muted,fontSize:11}}>{e.date}</td>
+                {isAdmin&&<td style={{padding:"8px 11px"}}>
+                  <span style={{background:C.accentSoft,color:C.accent,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{e.staffName}</span>
+                </td>}
+                <td style={{padding:"8px 11px",fontWeight:600}}>{e.description}</td>
+                <td style={{padding:"8px 11px",color:C.muted,fontSize:11}}>{e.category}</td>
+                <td style={{padding:"8px 11px",color:C.red,fontWeight:800}}>{pkr(e.amount)}</td>
+                <td style={{padding:"8px 11px",color:C.muted,fontSize:11}}>{e.notes||"--"}</td>
+                <td style={{padding:"8px 11px"}}>
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={function(){setForm(Object.assign({},e));setShowForm(true);}}
+                      style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Edit</button>
+                    {(isAdmin||e.staffId===currentUser.id)&&
+                      <button onClick={function(){delEntry(e.id);}}
+                        style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:5,padding:"3px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>Del</button>}
+                  </div>
+                </td>
+              </tr>
+            );})}
+            {sorted.length===0&&<tr><td colSpan={7} style={{padding:"20px",textAlign:"center",color:C.muted}}>Koi entry nahi — + Add Expense click karein</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── UDHAR TAB ───────────────────────────────────────────────
 function UdharTab(props){
   var udhar=Array.isArray(props.udhar)?props.udhar:[];
@@ -2144,6 +2305,7 @@ export default function App(){
   var [personal,setPersonalR]=useState(function(){return ld("olympia_personal",[]);});
   var [groups,setGroupsR]=useState(function(){var d=ld("olympia_groups",[]); return Array.isArray(d)?d:[];});
   var [udhar,setUdharR]=useState(function(){var d=ld("olympia_udhar",[]); return Array.isArray(d)?d:[];});
+  var [staffExp,setStaffExpR]=useState(function(){var d=ld("olympia_staffexp",[]); return Array.isArray(d)?d:[];});
   var [queries,setQueriesR]=useState(function(){
     var d=ld("olympia_queries",[]);
     return Array.isArray(d)?d:[];
@@ -2158,8 +2320,8 @@ export default function App(){
     {id:"staff1", name:"Staff 1", password:"staff123",    role:"staff"},
     {id:"staff2", name:"Staff 2", password:"staff456",    role:"staff"},
   ];
-  var ADMIN_TABS=["dashboard","bookings","customers","expenses","reports","partners","personal","marketing","queries"];
-  var STAFF_TABS=["bookings","queries"];
+  var ADMIN_TABS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries"];
+  var STAFF_TABS=["bookings","queries","groups","staffexp"];
   function getAccessTabs(role){return role==="admin"?ADMIN_TABS:STAFF_TABS;}
 
   function doLogin(){
@@ -2194,6 +2356,7 @@ export default function App(){
         {fb:"olympia_queries",   setter:setQueriesR,  lk:"olympia_queries",   getter:function(){return ld("olympia_queries",[]);}},
         {fb:"olympia_groups",    setter:setGroupsR,   lk:"olympia_groups",    getter:function(){return ld("olympia_groups",[]);}},
         {fb:"olympia_udhar",     setter:setUdharR,    lk:"olympia_udhar",     getter:function(){return ld("olympia_udhar",[]);}},
+        {fb:"olympia_staffexp",  setter:setStaffExpR, lk:"olympia_staffexp",  getter:function(){return ld("olympia_staffexp",[]);}},
       ];
 
       keys.forEach(function(kv){
@@ -2232,6 +2395,10 @@ export default function App(){
   function setUdhar(d){
     var arr=Array.isArray(d)?d:[];
     setUdharR(arr);sv("olympia_udhar",arr);fbSave("olympia_udhar",arr);showToast();
+  }
+  function setStaffExp(d){
+    var arr=Array.isArray(d)?d:[];
+    setStaffExpR(arr);sv("olympia_staffexp",arr);fbSave("olympia_staffexp",arr);showToast();
   }
   function setPersonal(d){
     setPersonalR(d);
@@ -2332,8 +2499,8 @@ export default function App(){
     {id:"customers",l:"Customers"},{id:"expenses",l:"Expenses"},
     {id:"reports",l:"Reports"},{id:"partners",l:"Partners"},
     {id:"groups",l:"Groups"},{id:"udhar",l:"Udhar 💰"},
-    {id:"personal",l:"My Expenses"},{id:"marketing",l:"Marketing"},
-    {id:"queries",l:"Queries"},
+    {id:"staffexp",l:"Staff Expenses"},{id:"personal",l:"My Expenses"},
+    {id:"marketing",l:"Marketing"},{id:"queries",l:"Queries"},
   ];
   var accessTabs=currentUser?getAccessTabs(currentUser.role):[];
   var TABS=ALL_TABS.filter(function(t){return accessTabs.includes(t.id);});
@@ -2873,6 +3040,7 @@ export default function App(){
         {tab==="queries"&&<QueriesTab queries={queries} setQueries={setQueries} currentUser={currentUser}/>}
         {tab==="groups"&&<GroupsTab groups={groups} setGroups={setGroups} customers={customers}/>}
         {tab==="udhar"&&<UdharTab udhar={udhar} setUdhar={setUdhar}/>}
+        {tab==="staffexp"&&<StaffExpTab staffExp={staffExp} setStaffExp={setStaffExp} currentUser={currentUser} expenses={expenses} setE={setE}/>}
       </div>
 
       {invB&&<InvoiceModal b={invB} onClose={function(){setInvB(null);}}/>}
