@@ -73,6 +73,16 @@ function fbSave(path,data){
   try{_db.ref(path).set(data);}catch(e){}
 }
 
+function fbReadOnce(path,cb){
+  if(!_ready||!_db){cb(null);return;}
+  try{
+    _db.ref(path).once("value",function(snap){
+      var val=snap.val();
+      cb(val);
+    });
+  }catch(e){cb(null);}
+}
+
 function fbListen(path,cb){
   if(!_ready||!_db) return;
   try{
@@ -1780,12 +1790,12 @@ function UdharTab(props){
 
   function printPerson(p){
     var entries=p.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-    var totalGiven=entries.filter(function(e){return e.type==="Diya";}).reduce(function(s,e){return s+e.amount;},0);
-    var totalTaken=entries.filter(function(e){return e.type==="Liya";}).reduce(function(s,e){return s+e.amount;},0);
+    var totalGiven=entries.filter(function(e){return e.type==="Diya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+    var totalTaken=entries.filter(function(e){return e.type==="Liya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
     var totalWapas=entries.reduce(function(s,e){return s+Number(e.paidBack||0);},0);
     var netBal=totalGiven-totalTaken-totalWapas;
     var rows=entries.map(function(e,i){
-      var bal=e.amount-Number(e.paidBack||0);
+      var bal=Number(e.amount||0)-Number(e.paidBack||0);
       return "<tr style='background:"+(i%2===0?"#fff":"#f9fafb")+"'>"
         +"<td style='padding:7px'>"+e.date+"</td>"
         +"<td style='padding:7px;font-weight:700;color:"+(e.type==="Diya"?"#dc2626":"#16a34a")+"'>"+(e.type==="Diya"?"💸 Diya":"💰 Liya")+"</td>"
@@ -1860,7 +1870,7 @@ function UdharTab(props){
         <div style={{background:"#fff5f5",border:"2px solid #fecaca",borderRadius:14,padding:14}}>
           <div style={{color:C.red,fontWeight:800,fontSize:12,marginBottom:8}}>💸 Maine Diya — Milna Hai</div>
           {people2.filter(function(p){return p.entries.some(function(e){return e.type==="Diya"&&e.status!=="Wapas";});}).map(function(p,i){
-            var bal=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
+            var bal=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
             return bal>0?(
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #fecaca"}}>
                 <div onClick={function(){setSelectedId(p.id);}} style={{cursor:"pointer"}}>
@@ -1881,7 +1891,7 @@ function UdharTab(props){
         <div style={{background:"#f0fdf4",border:"2px solid "+C.border,borderRadius:14,padding:14}}>
           <div style={{color:C.accent,fontWeight:800,fontSize:12,marginBottom:8}}>💰 Maine Liya — Dena Hai</div>
           {people2.filter(function(p){return p.entries.some(function(e){return e.type==="Liya"&&e.status!=="Wapas";});}).map(function(p,i){
-            var bal=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
+            var bal=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
             return bal>0?(
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+C.border}}>
                 <div onClick={function(){setSelectedId(p.id);}} style={{cursor:"pointer"}}>
@@ -1914,8 +1924,8 @@ function UdharTab(props){
       {/* Person cards */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
         {filteredPeople.map(function(p){
-          var pendingDiya=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
-          var pendingLiya=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
+          var pendingDiya=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
+          var pendingLiya=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
           var isOpen=selectedId===p.id;
           return(
             <div key={p.id} style={{background:"#fff",border:"1.5px solid "+(isOpen?C.accent:C.border),borderRadius:12,padding:14,boxShadow:C.shadow}}>
@@ -1985,7 +1995,7 @@ function UdharTab(props){
                     </button>
                   )}
                   {p.entries.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(e,ei){
-                    var bal=e.amount-Number(e.paidBack||0);
+                    var bal=Number(e.amount||0)-Number(e.paidBack||0);
                     var isDiya=e.type==="Diya";
                     return(
                       <div key={e.id} style={{background:e.status==="Wapas"?"#f0fdf4":"#fff",border:"1px solid "+(e.status==="Wapas"?C.border:isDiya?"#fecaca":C.border),borderRadius:8,padding:"8px 10px",marginBottom:6,opacity:e.status==="Wapas"?0.6:1}}>
@@ -1996,7 +2006,7 @@ function UdharTab(props){
                             <div style={{color:C.muted,fontSize:10,marginTop:2}}>📅 {e.date}{e.purpose?" | 📝 "+e.purpose:""}</div>
                           </div>
                           <div style={{textAlign:"right"}}>
-                            <div style={{fontWeight:900,fontSize:14,color:isDiya?C.red:C.accent}}>{pkr(e.amount)}</div>
+                            <div style={{fontWeight:900,fontSize:14,color:isDiya?C.red:C.accent}}>{pkr(Number(e.amount||0))}</div>
                             {Number(e.paidBack||0)>0&&<div style={{color:C.accent,fontSize:10}}>Wapas: {pkr(e.paidBack)}</div>}
                             {bal>0&&e.status!=="Wapas"&&<div style={{color:C.red,fontSize:11,fontWeight:700}}>Baqi: {pkr(bal)}</div>}
                           </div>
@@ -2551,25 +2561,52 @@ function GroupsTab(props){
               </tbody>
             </table>
           </div>
-          <div style={{display:"flex",gap:8}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {/* Print 1 - Full details with amounts */}
             <button onClick={function(){
               var mems=Array.isArray(viewG.members)?viewG.members:[];
               var exps=Array.isArray(viewG.expenses)?viewG.expenses:[];
               var rev=mems.reduce(function(s,m){return s+Number(m.price||viewG.pricePerPerson||0);},0);
               var exp=exps.reduce(function(s,e){return s+Number(e.amount||0);},0);
-              var rows=mems.map(function(m,i){return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+(i+1)+"</td><td style='font-weight:700'>"+(m.firstName||m.name)+"</td><td>"+(m.surname||"")+"</td><td>"+(m.phone||"")+"</td><td style='font-family:monospace'>"+(m.passport||"")+"</td><td>"+(m.dob||"")+"</td><td>"+(m.expiry||"")+"</td><td>"+(m.nationality||"")+"</td><td><span style='background:"+(m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3")+";padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700'>"+(m.visaStatus||"Pending")+"</span></td><td><span style='background:"+(m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2")+";padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700'>"+(m.paid||"Unpaid")+"</span></td></tr>";}).join("");
-              var html="<!DOCTYPE html><html><head><title>"+viewG.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:20px}.title{font-size:20px;font-weight:900;color:#16a34a;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:12px}.cards{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;text-align:center;min-width:80px}.cl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase}.cv{font-size:14px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-              +"<div class='title'>"+viewG.name+"</div>"
-              +"<div class='sub'>"+[viewG.destination,viewG.groupType,viewG.organization,viewG.departDate&&(viewG.departDate+(viewG.returnDate?" → "+viewG.returnDate:""))].filter(Boolean).join(" | ")+"</div>"
+              var rows=mems.map(function(m,i){return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td style='padding:7px'>"+(i+1)+"</td><td style='padding:7px;font-weight:700'>"+(m.firstName||m.name)+"</td><td style='padding:7px'>"+(m.surname||"")+"</td><td style='padding:7px'>"+(m.phone||"")+"</td><td style='padding:7px;font-family:monospace'>"+(m.passport||"")+"</td><td style='padding:7px'>"+(m.dob||"")+"</td><td style='padding:7px'>"+(m.expiry||"")+"</td><td style='padding:7px'>"+(m.reference||"")+"</td><td style='padding:7px'><span style='background:"+(m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3")+";padding:2px 6px;border-radius:20px;font-size:9px'>"+(m.visaStatus||"Pending")+"</span></td><td style='padding:7px;color:#dc2626;font-weight:700'>"+pkr(Number(m.price||viewG.pricePerPerson||0))+"</td><td style='padding:7px'><span style='background:"+(m.paid==="Paid"?"#dcfce7":m.paid==="Partial"?"#fef9c3":"#fee2e2")+";padding:2px 6px;border-radius:20px;font-size:9px'>"+(m.paid||"Unpaid")+"</span></td></tr>";}).join("");
+              var html="<!DOCTYPE html><html><head><title>"+viewG.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:15px}.hdr{display:flex;justify-content:space-between;border-bottom:2px solid #bbf7d0;padding-bottom:10px;margin-bottom:12px}.logo{height:50px}.title{font-size:18px;font-weight:900;color:#16a34a}.cards{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.card{flex:1;min-width:80px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px;text-align:center}.cl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase}.cv{font-size:14px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:6px 7px;text-align:left;font-size:8px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:10px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+              +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div><div class='title'>"+viewG.name+"</div><div style='font-size:11px;color:#6b7280'>"+AGENCY.name+" | "+AGENCY.phone1+"</div></div></div>"
+              +"<div style='font-size:12px;margin-bottom:10px;color:#374151'>"
+              +(viewG.groupType?"<b>Type:</b> "+viewG.groupType+" | ":"")
+              +(viewG.organization?"<b>Organization:</b> "+viewG.organization+" | ":"")
+              +(viewG.eventName?"<b>Event:</b> "+viewG.eventName+" | ":"")
+              +(viewG.departDate?"<b>Depart:</b> "+viewG.departDate+(viewG.returnDate?" → "+viewG.returnDate:"")+" | ":"")
+              +"<b>Price/Person:</b> "+pkr(viewG.pricePerPerson||0)
+              +"</div>"
               +"<div class='cards'><div class='card'><div class='cl'>Members</div><div class='cv'>"+mems.length+"</div></div><div class='card'><div class='cl'>Revenue</div><div class='cv'>"+pkr(rev)+"</div></div><div class='card'><div class='cl'>Expenses</div><div class='cv' style='color:#dc2626'>"+pkr(exp)+"</div></div><div class='card'><div class='cl'>Profit</div><div class='cv'>"+pkr(rev-exp)+"</div></div></div>"
-              +"<table><tr><th>#</th><th>First Name</th><th>Surname</th><th>Phone</th><th>Passport</th><th>DOB</th><th>Expiry</th><th>Nationality</th><th>Visa</th><th>Payment</th></tr>"+rows+"</table>"
-              +"<div class='foot'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
+              +"<table><tr><th>#</th><th>First Name</th><th>Surname</th><th>Phone</th><th>Passport</th><th>DOB</th><th>Expiry</th><th>Reference</th><th>Visa</th><th>Price</th><th>Payment</th></tr>"+rows+"</table>"
+              +"<div class='foot'>"+AGENCY.name+" | Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
               var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
-            }} style={{flex:1,background:"#0284c7",color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
-              🖨️ Print
+            }} style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 0",fontWeight:800,cursor:"pointer",fontSize:12}}>
+              🖨️ Full Print (with Amounts)
+            </button>
+            {/* Print 2 - Unofficial list only (reference, no amounts) */}
+            <button onClick={function(){
+              var mems=Array.isArray(viewG.members)?viewG.members:[];
+              var rows=mems.map(function(m,i){return "<tr style='background:"+(i%2===0?"#fff":"#f9fafb")+"'><td style='padding:7px'>"+(i+1)+"</td><td style='padding:7px;font-weight:700'>"+(m.firstName||m.name)+"</td><td style='padding:7px'>"+(m.surname||"")+"</td><td style='padding:7px'>"+(m.phone||"")+"</td><td style='padding:7px;font-family:monospace'>"+(m.passport||"")+"</td><td style='padding:7px'>"+(m.reference||"--")+"</td><td style='padding:7px'><span style='background:"+(m.visaStatus==="Approved"?"#dcfce7":m.visaStatus==="Refused"?"#fee2e2":"#fef9c3")+";padding:2px 6px;border-radius:20px;font-size:9px'>"+(m.visaStatus||"Pending")+"</span></td></tr>";}).join("");
+              var html="<!DOCTYPE html><html><head><title>"+viewG.name+" - List</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:20px}.title{font-size:20px;font-weight:900;color:#1f2937;margin-bottom:4px}.info{color:#6b7280;font-size:12px;margin-bottom:14px;line-height:1.8}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f3f4f6;padding:8px 7px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #e5e7eb}td{padding:7px;border-bottom:1px solid #f3f4f6}.foot{text-align:center;color:#9ca3af;font-size:10px;margin-top:14px;padding-top:8px;border-top:1px dashed #e5e7eb}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+              +"<div class='title'>"+viewG.name+"</div>"
+              +"<div class='info'>"
+              +(viewG.groupType?"Type: "+viewG.groupType+"<br>":"")
+              +(viewG.organization?"Organization: "+viewG.organization+"<br>":"")
+              +(viewG.eventName?"Event: "+viewG.eventName+"<br>":"")
+              +(viewG.departDate?"Travel: "+viewG.departDate+(viewG.returnDate?" → "+viewG.returnDate:"")+"<br>":"")
+              +"Members: "+mems.length
+              +"</div>"
+              +"<table><tr><th>#</th><th>First Name</th><th>Surname</th><th>Phone</th><th>Passport</th><th>Reference</th><th>Visa</th></tr>"+rows+"</table>"
+              +"<div class='foot'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
+              +"</body></html>";
+              var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+            }} style={{flex:1,background:"#6b7280",color:"#fff",border:"none",borderRadius:8,padding:"9px 0",fontWeight:800,cursor:"pointer",fontSize:12}}>
+              📋 List Only (No Amounts)
             </button>
             <button onClick={function(){setEditG(viewG);setShowForm(true);setViewG(null);}}
-              style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
+              style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 0",fontWeight:800,cursor:"pointer",fontSize:12}}>
               ✏️ Edit
             </button>
           </div>
@@ -2804,30 +2841,33 @@ export default function App(){
   }
 
   function doLogin(){
-    var u=USERS.find(function(x){return x.id===loginId&&x.password===loginPw;});
-    if(u){
-      setCurrentUser(u);
-      localStorage.setItem("olympia_user",JSON.stringify(u));
-      setLoginErr("");
-      setTab(u.role==="admin"?"dashboard":"queries");
-    } else {
-      // Try fetching latest from Firebase before showing error
-      setLoginErr("Checking...");
-      fbListen("olympia_users_config",function(fbData){
-        if(fbData&&Array.isArray(fbData.users)){
-          var fu=fbData.users.find(function(x){return x.id===loginId&&x.password===loginPw;});
-          if(fu){
-            setCurrentUser(fu);
-            localStorage.setItem("olympia_user",JSON.stringify(fu));
-            setLoginErr("");
-            setTab(fu.role==="admin"?"dashboard":"queries");
-          } else {
-            setLoginErr("Galat ID ya Password!");
-          }
+    // Always check Firebase first for latest credentials
+    setLoginErr("Checking...");
+    function tryLogin(usersList){
+      var u=usersList.find(function(x){return x.id===loginId&&x.password===loginPw;});
+      if(u){
+        setCurrentUser(u);
+        localStorage.setItem("olympia_user",JSON.stringify(u));
+        setLoginErr("");
+        setTab(u.role==="admin"?"dashboard":"queries");
+      } else {
+        setLoginErr("Galat ID ya Password!");
+      }
+    }
+    // Try Firebase first
+    try{
+      fbReadOnce("olympia_users_config",function(fbData){
+        if(fbData&&Array.isArray(fbData.users)&&fbData.users.length>0){
+          // Update local usersConfig too
+          setUsersConfigR(fbData);
+          sv("olympia_users_config",fbData);
+          tryLogin(fbData.users);
         } else {
-          setLoginErr("Galat ID ya Password!");
+          tryLogin(USERS);
         }
       });
+    }catch(e){
+      tryLogin(USERS);
     }
   }
   function doLogout(){
