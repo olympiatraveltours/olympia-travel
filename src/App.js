@@ -1280,6 +1280,7 @@ function UserEditor(ep){
   var sections=ep.sections||[];
   var sectionLabels=ep.sectionLabels||{};
   var [name,setName]=useState(u.name);
+  var [uid_val,setUidVal]=useState(u.id);
   var [pass,setPass]=useState(u.password);
   var [tabs,setTabs]=useState(Array.isArray(u.tabs)?u.tabs:[]);
 
@@ -1299,6 +1300,11 @@ function UserEditor(ep){
           <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>Name</label>
           <input value={name} onChange={function(e){setName(e.target.value);}} disabled={u.role==="admin"}
             style={{width:"100%",background:u.role==="admin"?"#f3f4f6":C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,padding:"8px 10px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1,minWidth:150}}>
+          <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>Login ID</label>
+          <input value={uid_val} onChange={function(e){setUidVal(e.target.value);}} disabled={u.role==="admin"}
+            style={{width:"100%",background:u.role==="admin"?"#f3f4f6":C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,padding:"8px 10px",fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
         </div>
         <div style={{flex:1,minWidth:150}}>
           <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>Password</label>
@@ -1336,11 +1342,11 @@ function UserEditor(ep){
       )}
 
       <div style={{display:"flex",gap:8}}>
-        <button onClick={function(){saveUser(Object.assign({},u,{name:name,password:pass,tabs:u.role==="admin"?null:tabs}));}}
+        <button onClick={function(){saveUser(Object.assign({},u,{id:u.role==="admin"?u.id:uid_val,name:name,password:pass,tabs:u.role==="admin"?null:tabs}));}}
           style={{flex:2,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
           💾 Save Changes
         </button>
-        <button onClick={function(){setEditUser(null);}}
+        <button onClick={function(){ep.onClose&&ep.onClose();}}
           style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:8,padding:"10px 0",fontWeight:700,cursor:"pointer",fontSize:12}}>
           Cancel
         </button>
@@ -1403,7 +1409,7 @@ function AccessControlTab(props){
       {msg&&<div style={{background:"#dcfce7",border:"1px solid "+C.border,borderRadius:8,padding:"10px 14px",marginBottom:12,color:C.accent,fontWeight:700,fontSize:12}}>✅ {msg}</div>}
 
       {/* Edit panel */}
-      {editUser&&<UserEditor user={editUser} saveUser={saveUser} delStaff={delStaff} sections={sections} sectionLabels={sectionLabels}/>}
+      {editUser&&<UserEditor user={editUser} saveUser={saveUser} delStaff={delStaff} sections={sections} sectionLabels={sectionLabels} onClose={function(){setEditUser(null);}}/>}
 
       {/* Users list */}
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -1614,6 +1620,7 @@ function UdharTab(props){
   var [showForm,setShowForm]=useState(false);
   var [editU,setEditU]=useState(null);
   var [filterType,setFilterType]=useState("all");
+  var [personFilter,setPersonFilter]=useState("");
   var [histPerson,setHistPerson]=useState(null);
 
   // All unique people
@@ -1621,6 +1628,7 @@ function UdharTab(props){
 
   // Filtered list
   var filtered=udhar.filter(function(u){
+    if(personFilter&&u.name!==personFilter) return false;
     if(filterType==="diya") return u.type==="Diya";
     if(filterType==="liya") return u.type==="Liya";
     return true;
@@ -1658,7 +1666,7 @@ function UdharTab(props){
     +(u.notes?"<div class='row'><span class='lbl'>Notes</span><span class='val'>"+u.notes+"</span></div>":"")
     +"</div>"
     +"<div class='bal'><div style='font-size:11px;color:#6b7280'>"+(bal>0?"Baqi Rakam":bal<0?"Extra Diya: "+pkr(Math.abs(bal)):"Clear")+"</div><div style='font-size:20px;font-weight:900;color:"+(bal>0?"#dc2626":"#16a34a")+"'>"+pkr(Math.abs(bal))+"</div></div>"
-    +"<div class='bt'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
+    +"<div class='bt'><b>Payment:</b> "+'03312351419 | SadaPay / NayaPay / JazzCash / EasyPaisa'+"<br>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
     +"</body></html>";
     var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
   }
@@ -1692,7 +1700,7 @@ function UdharTab(props){
     +"</div>"
     +"<table><tr><th>Date</th><th>Type</th><th>Amount</th><th>Wapas</th><th>Baqi</th><th>Wajah</th><th>Notes</th></tr>"+rows+"</table>"
     +"<div class='net'><div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(netBal>0?"Aap ko milna hai":netBal<0?"Aap ko dena hai":"Barabar!")+"</div><div style='font-size:24px;font-weight:900;color:"+(netBal>0?"#dc2626":netBal<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(netBal))+"</div></div>"
-    +"<div class='foot'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
+    +"<div class='foot'><b>Payment:</b> "+'03312351419 | SadaPay / NayaPay / JazzCash / EasyPaisa'+"<br>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
     +"</body></html>";
     var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
   }
@@ -1794,7 +1802,7 @@ function UdharTab(props){
         </div>
       </div>
 
-      {/* Filter */}
+      {/* Filter + Person selector */}
       <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
         {[["all","All"],["diya","💸 Diya"],["liya","💰 Liya"]].map(function(fl){return(
           <button key={fl[0]} onClick={function(){setFilterType(fl[0]);}}
@@ -1802,7 +1810,13 @@ function UdharTab(props){
             {fl[1]}
           </button>
         );})}
-        {/* Person history filter */}
+        {/* Person filter */}
+        <select value={personFilter} onChange={function(e){setPersonFilter(e.target.value);}}
+          style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 10px",fontSize:11,outline:"none"}}>
+          <option value="">👤 Sab log</option>
+          {people.map(function(p){return <option key={p} value={p}>{p}</option>;})}
+        </select>
+        {/* Print */}
         <select onChange={function(e){if(e.target.value)printPersonHistory(e.target.value);e.target.value="";}}
           style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 10px",fontSize:11,outline:"none",marginLeft:"auto"}}>
           <option value="">🖨️ Print kisi ka hisaab...</option>
