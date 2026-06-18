@@ -1695,13 +1695,14 @@ function UdharTab(props){
     return Object.values(grouped);
   },[udhar]);
 
-  var [viewPerson,setViewPerson]=useState(null);
+  var [selectedId,setSelectedId]=useState(null);   // which person card is open
+  var [mode,setMode]=useState("view");              // "view"|"entry"|"editprofile"
   var [showPersonForm,setShowPersonForm]=useState(false);
-  var [activeEntryId,setActiveEntryId]=useState(null); // personId which has entry form open
   var [editEntry,setEditEntry]=useState(null);
-  var [editPersonObj,setEditPersonObj]=useState(null); // person being edited
   var [newName,setNewName]=useState("");
   var [newPhone,setNewPhone]=useState("");
+  var [editPName,setEditPName]=useState("");
+  var [editPPhone,setEditPPhone]=useState("");
   var [filterType,setFilterType]=useState("all");
 
   // Summary
@@ -1743,9 +1744,6 @@ function UdharTab(props){
       return Object.assign({},p,{entries:p.entries.concat([Object.assign({},entry,{id:uid("UE")})])});
     });
     savePeople(updated);
-    // Update viewPerson
-    var vp=updated.find(function(p){return p.id===personId;});
-    if(vp) setViewPerson(vp);
   }
 
   function updateEntry(personId,entry){
@@ -1754,8 +1752,6 @@ function UdharTab(props){
       return Object.assign({},p,{entries:p.entries.map(function(e){return e.id===entry.id?entry:e;})});
     });
     savePeople(updated);
-    var vp=updated.find(function(p){return p.id===personId;});
-    if(vp) setViewPerson(vp);
   }
 
   function delEntry(personId,entryId){
@@ -1765,14 +1761,12 @@ function UdharTab(props){
       return Object.assign({},p,{entries:p.entries.filter(function(e){return e.id!==entryId;})});
     });
     savePeople(updated);
-    var vp=updated.find(function(p){return p.id===personId;});
-    if(vp) setViewPerson(vp);
   }
 
   function delPerson(personId){
     if(!window.confirm("Is bande ka sara data delete hoga. Sure?")) return;
     savePeople(people2.filter(function(p){return p.id!==personId;}));
-    setViewPerson(null);
+    setSelectedId(null);setMode("view");
   }
 
   function markWapas(personId,entryId){
@@ -1783,8 +1777,6 @@ function UdharTab(props){
       })});
     });
     savePeople(updated);
-    var vp=updated.find(function(p){return p.id===personId;});
-    if(vp) setViewPerson(vp);
   }
 
   function printPerson(p){
@@ -1925,9 +1917,9 @@ function UdharTab(props){
         {filteredPeople.map(function(p){
           var pendingDiya=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
           var pendingLiya=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
-          var isViewing=viewPerson&&viewPerson.id===p.id;
+          var isOpen=selectedId===p.id;
           return(
-            <div key={p.id} style={{background:"#fff",border:"1.5px solid "+(isViewing?C.accent:C.border),borderRadius:12,padding:14,boxShadow:C.shadow}}>
+            <div key={p.id} style={{background:"#fff",border:"1.5px solid "+(isOpen?C.accent:C.border),borderRadius:12,padding:14,boxShadow:C.shadow}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <div>
                   <div style={{fontWeight:800,fontSize:14}}>{p.name}</div>
@@ -1940,56 +1932,55 @@ function UdharTab(props){
                 </div>
               </div>
               <div style={{display:"flex",gap:5}}>
-                <button onClick={function(){setViewPerson(isViewing?null:p);setActiveEntryId(null);setEditEntry(null);}}
-                  style={{flex:1,background:isViewing?C.accent:C.accentSoft,border:"1px solid "+C.accent,color:isViewing?"#fff":C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                  {isViewing?"✕ Close":"👁 View"}
+                <button onClick={function(){setSelectedId(isOpen?null:p.id);setMode("view");setEditEntry(null);}}
+                  style={{flex:1,background:isOpen?C.accent:C.accentSoft,border:"1px solid "+C.accent,color:isOpen?"#fff":C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                  {isOpen?"✕ Close":"👁 View"}
                 </button>
-                <button onClick={function(){setViewPerson(p);setActiveEntryId(viewPerson?viewPerson.id:null);setEditEntry(null);}}
+                <button onClick={function(){setSelectedId(p.id);setMode("entry");setEditEntry(null);}}
                   style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
                   + Entry
                 </button>
                 <button onClick={function(){printPerson(p);}}
                   style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#374151",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:11,fontWeight:700}}>🖨️</button>
+                <button onClick={function(){setSelectedId(p.id);setMode("editprofile");setEditPName(p.name);setEditPPhone(p.phone||"");}}
+                  style={{background:"#eff6ff",border:"1px solid #bfdbfe",color:"#1d4ed8",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:11,fontWeight:700}}>✏️</button>
               </div>
 
-              {/* Expanded view */}
-              {isViewing&&(
+              {/* Expanded view - ONLY for selected card */}
+              {isOpen&&(
                 <div style={{marginTop:10,borderTop:"1px solid "+C.border,paddingTop:10}}>
-                  {/* Edit profile name/phone */}
-                  {editPersonObj&&editPersonObj.id===p.id&&(
+                  {/* Edit profile */}
+                  {mode==="editprofile"&&(
                     <div style={{background:C.accentSoft,border:"1.5px solid "+C.accent,borderRadius:10,padding:12,marginBottom:10}}>
                       <div style={{fontWeight:700,color:C.accent,fontSize:12,marginBottom:8}}>✏️ Edit Profile</div>
                       <div style={{display:"flex",gap:8,marginBottom:8}}>
-                        <input value={editPersonObj.name} onChange={function(e){setEditPersonObj(Object.assign({},editPersonObj,{name:e.target.value}));}}
+                        <input value={editPName} onChange={function(e){setEditPName(e.target.value);}}
                           placeholder="Naam" style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
-                        <input value={editPersonObj.phone||""} onChange={function(e){setEditPersonObj(Object.assign({},editPersonObj,{phone:e.target.value}));}}
+                        <input value={editPPhone} onChange={function(e){setEditPPhone(e.target.value);}}
                           placeholder="Phone" style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
                       </div>
                       <div style={{display:"flex",gap:6}}>
                         <button onClick={function(){
-                          var updated=people2.map(function(pp){return pp.id===p.id?Object.assign({},pp,{name:editPersonObj.name,phone:editPersonObj.phone}):pp;});
-                          savePeople(updated);
-                          var vp=updated.find(function(pp){return pp.id===p.id;});
-                          if(vp){setViewPerson(vp);}
-                          setEditPersonObj(null);
+                          savePeople(people2.map(function(pp){return pp.id===p.id?Object.assign({},pp,{name:editPName,phone:editPPhone}):pp;}));
+                          setMode("view");
                         }} style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>💾 Save</button>
-                        <button onClick={function(){setEditPersonObj(null);}} style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>Cancel</button>
+                        <button onClick={function(){setMode("view");}} style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>Cancel</button>
                       </div>
                     </div>
                   )}
-                  {activeEntryId===p.id&&(
+                  {mode==="entry"&&(
                     <EntryForm
                       entry={editEntry}
                       onSave={function(ef){
                         if(editEntry){updateEntry(p.id,Object.assign({},editEntry,ef));}
                         else{addEntry(p.id,ef);}
-                        setActiveEntryId(null);setEditEntry(null);
+                        setMode("view");setEditEntry(null);
                       }}
-                      onCancel={function(){setActiveEntryId(null);setEditEntry(null);}}
+                      onCancel={function(){setMode("view");setEditEntry(null);}}
                     />
                   )}
-                  {activeEntryId!==p.id&&(
-                    <button onClick={function(){setActiveEntryId(p.id);setEditEntry(null);}}
+                  {mode!=="entry"&&(
+                    <button onClick={function(){setMode("entry");setEditEntry(null);}}
                       style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 0",fontWeight:700,cursor:"pointer",fontSize:12,marginBottom:8}}>
                       + Add New Entry
                     </button>
@@ -2768,6 +2759,21 @@ export default function App(){
   var [toast,setToast]=useState(false);
 
   function showToast(){setToast(true);setTimeout(function(){setToast(false);},2000);}
+
+  // Re-validate logged-in user when usersConfig updates from Firebase
+  useEffect(function(){
+    if(!currentUser) return;
+    var freshUser=USERS.find(function(u){return u.id===currentUser.id;});
+    if(!freshUser){
+      // ID was changed - force re-login
+      setCurrentUser(null);
+      localStorage.removeItem("olympia_user");
+    } else if(freshUser.password!==currentUser.password||freshUser.name!==currentUser.name){
+      // Password/name changed - update stored user
+      setCurrentUser(freshUser);
+      localStorage.setItem("olympia_user",JSON.stringify(freshUser));
+    }
+  },[usersConfig]);
 
   var ALL_SECTION_IDS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries"];
   var SECTION_LABELS={dashboard:"Dashboard",bookings:"Bookings",customers:"Customers",expenses:"Expenses",reports:"Reports",partners:"Partners",groups:"Groups",udhar:"Udhar",staffexp:"Staff Expenses",personal:"My Expenses",marketing:"Marketing",queries:"Queries"};
