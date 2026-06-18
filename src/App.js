@@ -204,7 +204,6 @@ function Toast(props){return props.show?<div style={{position:"fixed",bottom:20,
 function buildInvoiceHTML(b, isAllTime, allBookings){
   var logoSrc=LOGO_URI;
   var tax=Math.round((b?b.amount:0)*.05);
-  var total=(b?b.amount:0)+tax;
   var profit=b?(Number(b.amount)-Number(b.cost||0)-Number(b.commission||0)):0;
 
   var css="*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:#f0fdf4;padding:20px;color:#1f2937}"
