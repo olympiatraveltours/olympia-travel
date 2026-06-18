@@ -1683,6 +1683,62 @@ function EntryForm(efp){
   );
 }
 
+function UdharEntryForm(efp){
+  var editEntry=efp.editEntry;
+  var onSave=efp.onSave;
+  var [ef,setEf]=useState(editEntry?Object.assign({},editEntry):{
+    date:new Date().toISOString().split("T")[0],type:"Diya",amount:"",paidBack:"",purpose:"",notes:"",status:"Pending"
+  });
+  return(
+    <div>
+      <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:10}}>
+        <button onClick={function(){setEf(Object.assign({},ef,{type:"Diya"}));}}
+          style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Diya"?C.red:"transparent",color:ef.type==="Diya"?"#fff":C.muted,fontWeight:800,cursor:"pointer"}}>
+          💸 Maine Diya
+        </button>
+        <button onClick={function(){setEf(Object.assign({},ef,{type:"Liya"}));}}
+          style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Liya"?C.accent:"transparent",color:ef.type==="Liya"?"#fff":C.muted,fontWeight:800,cursor:"pointer"}}>
+          💰 Maine Liya
+        </button>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Amount</label>
+          <input value={ef.amount} onChange={function(e){setEf(Object.assign({},ef,{amount:e.target.value}));}} type="number" placeholder="0"
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:14,outline:"none",fontWeight:700,boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Date</label>
+          <input value={ef.date} onChange={function(e){setEf(Object.assign({},ef,{date:e.target.value}));}} type="date"
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Wapas Hua</label>
+          <input value={ef.paidBack||""} onChange={function(e){setEf(Object.assign({},ef,{paidBack:e.target.value}));}} type="number" placeholder="0"
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Status</label>
+          <select value={ef.status} onChange={function(e){setEf(Object.assign({},ef,{status:e.target.value}));}}
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}>
+            <option>Pending</option><option>Partial</option><option>Wapas</option>
+          </select>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:10}}>
+        <input value={ef.purpose||""} onChange={function(e){setEf(Object.assign({},ef,{purpose:e.target.value}));}} placeholder="Wajah"
+          style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none"}}/>
+        <input value={ef.notes||""} onChange={function(e){setEf(Object.assign({},ef,{notes:e.target.value}));}} placeholder="Notes"
+          style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none"}}/>
+      </div>
+      <button onClick={function(){onSave(ef);}}
+        style={{width:"100%",background:ef.type==="Diya"?C.red:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
+        💾 Save Entry
+      </button>
+    </div>
+  );
+}
+
 function UdharTab(props){
   var udhar=Array.isArray(props.udhar)?props.udhar:[];
   var setUdhar=props.setUdhar;
@@ -1956,59 +2012,7 @@ function UdharTab(props){
           {showEntry&&(
             <div style={{background:editEntry?"#fffbeb":"#f0fdf4",border:"1.5px solid "+(editEntry?"#fde68a":C.border),borderRadius:10,padding:14,marginBottom:12}}>
               <div style={{fontWeight:700,color:C.accent,fontSize:13,marginBottom:10}}>{editEntry?"✏️ Edit Entry":"+ New Entry"}</div>
-              {function(){
-                var [ef,setEf]=useState(editEntry?Object.assign({},editEntry):{
-                  date:new Date().toISOString().split("T")[0],type:"Diya",amount:"",paidBack:"",purpose:"",notes:"",status:"Pending"
-                });
-                return(
-                  <div>
-                    <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:10}}>
-                      <button onClick={function(){setEf(Object.assign({},ef,{type:"Diya"}));}}
-                        style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Diya"?C.red:"transparent",color:ef.type==="Diya"?"#fff":C.muted,fontWeight:800,cursor:"pointer"}}>
-                        💸 Maine Diya
-                      </button>
-                      <button onClick={function(){setEf(Object.assign({},ef,{type:"Liya"}));}}
-                        style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Liya"?C.accent:"transparent",color:ef.type==="Liya"?"#fff":C.muted,fontWeight:800,cursor:"pointer"}}>
-                        💰 Maine Liya
-                      </button>
-                    </div>
-                    <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-                      <div style={{flex:1,minWidth:120}}>
-                        <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Amount</label>
-                        <input value={ef.amount} onChange={function(e){setEf(Object.assign({},ef,{amount:e.target.value}));}} type="number" placeholder="0"
-                          style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:14,outline:"none",fontWeight:700,boxSizing:"border-box"}}/>
-                      </div>
-                      <div style={{flex:1,minWidth:120}}>
-                        <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Date</label>
-                        <input value={ef.date} onChange={function(e){setEf(Object.assign({},ef,{date:e.target.value}));}} type="date"
-                          style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
-                      </div>
-                      <div style={{flex:1,minWidth:120}}>
-                        <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Wapas Hua</label>
-                        <input value={ef.paidBack||""} onChange={function(e){setEf(Object.assign({},ef,{paidBack:e.target.value}));}} type="number" placeholder="0"
-                          style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
-                      </div>
-                      <div style={{flex:1,minWidth:120}}>
-                        <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Status</label>
-                        <select value={ef.status} onChange={function(e){setEf(Object.assign({},ef,{status:e.target.value}));}}
-                          style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}>
-                          <option>Pending</option><option>Partial</option><option>Wapas</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div style={{display:"flex",gap:8,marginBottom:10}}>
-                      <input value={ef.purpose||""} onChange={function(e){setEf(Object.assign({},ef,{purpose:e.target.value}));}} placeholder="Wajah"
-                        style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none"}}/>
-                      <input value={ef.notes||""} onChange={function(e){setEf(Object.assign({},ef,{notes:e.target.value}));}} placeholder="Notes"
-                        style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none"}}/>
-                    </div>
-                    <button onClick={function(){editEntry?doUpdateEntry(ef):doAddEntry(ef);}}
-                      style={{width:"100%",background:ef.type==="Diya"?C.red:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
-                      💾 Save Entry
-                    </button>
-                  </div>
-                );
-              }()}
+              <UdharEntryForm editEntry={editEntry} onSave={function(ef){editEntry?doUpdateEntry(ef):doAddEntry(ef);}}/>
             </div>
           )}
 
