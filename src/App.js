@@ -1669,7 +1669,7 @@ function EntryForm(efp){
           style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
       </div>
       <div style={{display:"flex",gap:8}}>
-        <button onClick={function(){efp.onSave(ef);}}
+        <button onClick={function(){efp.onSave(Object.assign({},ef,{amount:Number(ef.amount||0),paidBack:Number(ef.paidBack||0)}));}}
           style={{flex:2,background:ef.type==="Diya"?C.red:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"9px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
           💾 Save Entry
         </button>
@@ -1704,10 +1704,11 @@ function UdharTab(props){
     return Object.values(grouped);
   },[udhar]);
 
-  var [selectedId,setSelectedId]=useState(null);   // which person card is open
-  var [mode,setMode]=useState("view");              // "view"|"entry"|"editprofile"
-  var [showPersonForm,setShowPersonForm]=useState(false);
+  var [openCardId,setOpenCardId]=useState(null);    // which card is expanded
+  var [openEntryId,setOpenEntryId]=useState(null);  // which card has +entry form
+  var [openEditId,setOpenEditId]=useState(null);    // which card has edit profile
   var [editEntry,setEditEntry]=useState(null);
+  var [showPersonForm,setShowPersonForm]=useState(false);
   var [newName,setNewName]=useState("");
   var [newPhone,setNewPhone]=useState("");
   var [editPName,setEditPName]=useState("");
@@ -1732,16 +1733,18 @@ function UdharTab(props){
     var existIdx=people2.findIndex(function(p){return p.name.toLowerCase().trim()===newName.toLowerCase().trim();});
     if(existIdx>=0){
       // Already exists - just open their profile
-      setSelectedId(people2[existIdx].id);
-      setMode("entry");
+      setOpenCardId(people2[existIdx].id);
+      setOpenEntryId(people2[existIdx].id);
+      setOpenEditId(null);
       setShowPersonForm(false);
       setNewName("");setNewPhone("");
     } else {
       var newP={id:uid("UP"),name:newName.trim(),phone:newPhone.trim(),entries:[]};
       var updated=people2.concat([newP]);
       savePeople(updated);
-      setSelectedId(newP.id);
-      setMode("entry");
+      setOpenCardId(newP.id);
+      setOpenEntryId(newP.id);
+      setOpenEditId(null);
       setShowPersonForm(false);
       setNewName("");setNewPhone("");
     }
@@ -1775,7 +1778,7 @@ function UdharTab(props){
   function delPerson(personId){
     if(!window.confirm("Is bande ka sara data delete hoga. Sure?")) return;
     savePeople(people2.filter(function(p){return p.id!==personId;}));
-    setSelectedId(null);setMode("view");
+    setOpenCardId(null);setOpenEntryId(null);setOpenEditId(null);
   }
 
   function markWapas(personId,entryId){
@@ -1873,7 +1876,7 @@ function UdharTab(props){
             var bal=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
             return bal>0?(
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #fecaca"}}>
-                <div onClick={function(){setSelectedId(p.id);}} style={{cursor:"pointer"}}>
+                <div onClick={function(){setOpenCardId(p.id);setOpenEntryId(null);setOpenEditId(null);}} style={{cursor:"pointer"}}>
                   <div style={{fontWeight:700,fontSize:12,color:C.red}}>{p.name}</div>
                   {p.phone&&<div style={{color:C.muted,fontSize:10}}>{p.phone}</div>}
                 </div>
@@ -1894,7 +1897,7 @@ function UdharTab(props){
             var bal=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
             return bal>0?(
               <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+C.border}}>
-                <div onClick={function(){setSelectedId(p.id);}} style={{cursor:"pointer"}}>
+                <div onClick={function(){setOpenCardId(p.id);setOpenEntryId(null);setOpenEditId(null);}} style={{cursor:"pointer"}}>
                   <div style={{fontWeight:700,fontSize:12,color:C.accent}}>{p.name}</div>
                   {p.phone&&<div style={{color:C.muted,fontSize:10}}>{p.phone}</div>}
                 </div>
@@ -1926,7 +1929,9 @@ function UdharTab(props){
         {filteredPeople.map(function(p){
           var pendingDiya=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
           var pendingLiya=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
-          var isOpen=selectedId===p.id;
+          var isOpen=openCardId===p.id;
+          var showEntry=openEntryId===p.id;
+          var showEditProf=openEditId===p.id;
           return(
             <div key={p.id} style={{background:"#fff",border:"1.5px solid "+(isOpen?C.accent:C.border),borderRadius:12,padding:14,boxShadow:C.shadow}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -1941,17 +1946,17 @@ function UdharTab(props){
                 </div>
               </div>
               <div style={{display:"flex",gap:5}}>
-                <button onClick={function(){setSelectedId(isOpen?null:p.id);setMode("view");setEditEntry(null);}}
+                <button onClick={function(){setOpenCardId(isOpen?null:p.id);setOpenEntryId(null);setOpenEditId(null);setEditEntry(null);}}
                   style={{flex:1,background:isOpen?C.accent:C.accentSoft,border:"1px solid "+C.accent,color:isOpen?"#fff":C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
                   {isOpen?"✕ Close":"👁 View"}
                 </button>
-                <button onClick={function(){setSelectedId(p.id);setMode("entry");setEditEntry(null);}}
+                <button onClick={function(){setOpenCardId(p.id);setOpenEntryId(openEntryId===p.id?null:p.id);setOpenEditId(null);setEditEntry(null);}}
                   style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
                   + Entry
                 </button>
                 <button onClick={function(){printPerson(p);}}
                   style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#374151",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:11,fontWeight:700}}>🖨️</button>
-                <button onClick={function(){setSelectedId(p.id);setMode("editprofile");setEditPName(p.name);setEditPPhone(p.phone||"");}}
+                <button onClick={function(){setOpenCardId(p.id);setOpenEditId(openEditId===p.id?null:p.id);setOpenEntryId(null);setEditPName(p.name);setEditPPhone(p.phone||"");}}
                   style={{background:"#eff6ff",border:"1px solid #bfdbfe",color:"#1d4ed8",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:11,fontWeight:700}}>✏️</button>
               </div>
 
@@ -1959,7 +1964,7 @@ function UdharTab(props){
               {isOpen&&(
                 <div style={{marginTop:10,borderTop:"1px solid "+C.border,paddingTop:10}}>
                   {/* Edit profile */}
-                  {mode==="editprofile"&&(
+                  {showEditProf&&(
                     <div style={{background:C.accentSoft,border:"1.5px solid "+C.accent,borderRadius:10,padding:12,marginBottom:10}}>
                       <div style={{fontWeight:700,color:C.accent,fontSize:12,marginBottom:8}}>✏️ Edit Profile</div>
                       <div style={{display:"flex",gap:8,marginBottom:8}}>
@@ -1971,25 +1976,25 @@ function UdharTab(props){
                       <div style={{display:"flex",gap:6}}>
                         <button onClick={function(){
                           savePeople(people2.map(function(pp){return pp.id===p.id?Object.assign({},pp,{name:editPName,phone:editPPhone}):pp;}));
-                          setMode("view");
+                          setOpenEditId(null);
                         }} style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>💾 Save</button>
-                        <button onClick={function(){setMode("view");}} style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>Cancel</button>
+                        <button onClick={function(){setOpenEditId(null);}} style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>Cancel</button>
                       </div>
                     </div>
                   )}
-                  {mode==="entry"&&(
+                  {showEntry&&(
                     <EntryForm
                       entry={editEntry}
                       onSave={function(ef){
                         if(editEntry){updateEntry(p.id,Object.assign({},editEntry,ef));}
                         else{addEntry(p.id,ef);}
-                        setMode("view");setEditEntry(null);
+                        setOpenEditId(null);setEditEntry(null);
                       }}
-                      onCancel={function(){setMode("view");setEditEntry(null);}}
+                      onCancel={function(){setOpenEditId(null);setEditEntry(null);}}
                     />
                   )}
-                  {mode!=="entry"&&(
-                    <button onClick={function(){setMode("entry");setEditEntry(null);}}
+                  {!showEntry&&(
+                    <button onClick={function(){setOpenEntryId(p.id);setEditEntry(null);}}
                       style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 0",fontWeight:700,cursor:"pointer",fontSize:12,marginBottom:8}}>
                       + Add New Entry
                     </button>
@@ -2013,7 +2018,7 @@ function UdharTab(props){
                         </div>
                         {e.notes&&<div style={{color:C.muted,fontSize:10,marginTop:3}}>💬 {e.notes}</div>}
                         <div style={{display:"flex",gap:4,marginTop:6}}>
-                          <button onClick={function(){setEditEntry(e);setMode("entry");}}
+                          <button onClick={function(){setEditEntry(e);setOpenEntryId(p.id);}}
                             style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>Edit</button>
                           {e.status!=="Wapas"&&<button onClick={function(){markWapas(p.id,e.id);}}
                             style={{background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>✅ Wapas</button>}
