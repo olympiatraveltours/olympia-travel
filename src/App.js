@@ -1302,8 +1302,8 @@ function UserEditor(ep){
             style={{width:"100%",background:u.role==="admin"?"#f3f4f6":C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,padding:"8px 10px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
         </div>
         <div style={{flex:1,minWidth:150}}>
-          <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>Login ID</label>
-          <input value={uid_val} onChange={function(e){setUidVal(e.target.value);}} disabled={u.role==="admin"}
+          <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>Login ID <span style={{color:C.muted,fontWeight:400,textTransform:"none"}}>(change kar sakte hain)</span></label>
+          <input value={uid_val} onChange={function(e){setUidVal(e.target.value.replace(/ /g,""));}} disabled={u.role==="admin"}
             style={{width:"100%",background:u.role==="admin"?"#f3f4f6":C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,padding:"8px 10px",fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
         </div>
         <div style={{flex:1,minWidth:150}}>
@@ -1342,7 +1342,7 @@ function UserEditor(ep){
       )}
 
       <div style={{display:"flex",gap:8}}>
-        <button onClick={function(){saveUser(Object.assign({},u,{id:u.role==="admin"?u.id:uid_val,name:name,password:pass,tabs:u.role==="admin"?null:tabs}));}}
+        <button onClick={function(){saveUser(Object.assign({},u,{id:u.role==="admin"?u.id:(uid_val||u.id),name:name,password:pass,tabs:u.role==="admin"?null:tabs}),u.id);}}
           style={{flex:2,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
           💾 Save Changes
         </button>
@@ -1369,12 +1369,13 @@ function AccessControlTab(props){
   // All sections with labels
   var sections=allSections.map(function(id){return {id:id,label:sectionLabels[id]||id};});
 
-  function saveUser(updatedUser){
-    var newUsers=users.map(function(u){return u.id===updatedUser.id?updatedUser:u;});
+  function saveUser(updatedUser,oldId){
+    var searchId=oldId||updatedUser.id;
+    var newUsers=users.map(function(u){return u.id===searchId?updatedUser:u;});
     saveUsersConfig(Object.assign({},usersConfig,{users:newUsers}));
     setEditUser(null);
-    setMsg("Saved! Staff ko logout/login karna hoga changes ke liye.");
-    setTimeout(function(){setMsg("");},3000);
+    setMsg("Saved! ID: "+updatedUser.id+" | Staff ko logout/login karna hoga.");
+    setTimeout(function(){setMsg("");},4000);
   }
 
   function addStaff(){
@@ -1610,266 +1611,407 @@ function StaffExpTab(props){
 }
 
 // ─── UDHAR TAB ───────────────────────────────────────────────
+// Entry form for Udhar
+function EntryForm(efp){
+
+  var emptyE={date:new Date().toISOString().split("T")[0],type:"Diya",amount:"",purpose:"",notes:"",paidBack:"",status:"Pending"};
+  var [ef,setEf]=useState(efp.entry?Object.assign({},efp.entry):emptyE);
+  return(
+    <div style={{background:"#fff",border:"2px solid "+C.accent,borderRadius:12,padding:16,marginBottom:12}}>
+      <div style={{fontWeight:800,color:C.accent,fontSize:13,marginBottom:10}}>{efp.entry?"✏️ Edit Entry":"+ New Entry"}</div>
+      <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:10}}>
+        <button onClick={function(){setEf(Object.assign({},ef,{type:"Diya"}));}}
+          style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Diya"?C.red:"transparent",color:ef.type==="Diya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12}}>
+          💸 Maine Diya
+        </button>
+        <button onClick={function(){setEf(Object.assign({},ef,{type:"Liya"}));}}
+          style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Liya"?C.accent:"transparent",color:ef.type==="Liya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12}}>
+          💰 Maine Liya
+        </button>
+      </div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Amount</label>
+          <input value={ef.amount} onChange={function(e){setEf(Object.assign({},ef,{amount:e.target.value}));}} type="number" placeholder="PKR"
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:13,outline:"none",boxSizing:"border-box",fontWeight:700}}/>
+        </div>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Date</label>
+          <input value={ef.date} onChange={function(e){setEf(Object.assign({},ef,{date:e.target.value}));}} type="date"
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Wapas Hua</label>
+          <input value={ef.paidBack||""} onChange={function(e){setEf(Object.assign({},ef,{paidBack:e.target.value}));}} type="number" placeholder="0"
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1,minWidth:120}}>
+          <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Status</label>
+          <select value={ef.status} onChange={function(e){setEf(Object.assign({},ef,{status:e.target.value}));}}
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none",boxSizing:"border-box"}}>
+            <option>Pending</option><option>Partial</option><option>Wapas</option>
+          </select>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:10}}>
+        <input value={ef.purpose||""} onChange={function(e){setEf(Object.assign({},ef,{purpose:e.target.value}));}} placeholder="Wajah / Purpose"
+          style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+        <input value={ef.notes||""} onChange={function(e){setEf(Object.assign({},ef,{notes:e.target.value}));}} placeholder="Notes"
+          style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={function(){efp.onSave(ef);}}
+          style={{flex:2,background:ef.type==="Diya"?C.red:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"9px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
+          💾 Save Entry
+        </button>
+        <button onClick={efp.onCancel}
+          style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:7,padding:"9px 0",fontWeight:700,cursor:"pointer"}}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function UdharTab(props){
   var udhar=Array.isArray(props.udhar)?props.udhar:[];
   var setUdhar=props.setUdhar;
 
-  var emptyU={id:"",name:"",phone:"",amount:"",date:new Date().toISOString().split("T")[0],
-    purpose:"",sentTo:"",type:"Diya",status:"Pending",notes:"",paidBack:""};
+  // udhar structure: array of PEOPLE
+  // each person: {id, name, phone, entries:[{id,date,type,amount,purpose,notes,paidBack,status}]}
+  // Migrate old flat structure if needed
+  var people2=useMemo(function(){
+    if(udhar.length===0) return [];
+    // Check if new structure (has entries array) or old flat
+    if(udhar[0]&&Array.isArray(udhar[0].entries)) return udhar;
+    // Migrate old to new
+    var grouped={};
+    udhar.forEach(function(u){
+      var key=(u.name||"").toLowerCase().trim();
+      if(!grouped[key]) grouped[key]={id:uid("UP"),name:u.name,phone:u.phone||"",entries:[]};
+      grouped[key].entries.push({id:u.id||uid("UE"),date:u.date,type:u.type,amount:Number(u.amount||0),
+        purpose:u.purpose||"",sentTo:u.sentTo||"",notes:u.notes||"",paidBack:Number(u.paidBack||0),status:u.status||"Pending"});
+    });
+    return Object.values(grouped);
+  },[udhar]);
 
-  var [showForm,setShowForm]=useState(false);
-  var [editU,setEditU]=useState(null);
+  var [viewPerson,setViewPerson]=useState(null);
+  var [showPersonForm,setShowPersonForm]=useState(false);
+  var [showEntryForm,setShowEntryForm]=useState(false);
+  var [editEntry,setEditEntry]=useState(null);
+  var [editPersonData,setEditPersonData]=useState(null);
+  var [newName,setNewName]=useState("");
+  var [newPhone,setNewPhone]=useState("");
   var [filterType,setFilterType]=useState("all");
-  var [personFilter,setPersonFilter]=useState("");
-  var [histPerson,setHistPerson]=useState(null);
 
-  // All unique people
-  var people=[...new Set(udhar.map(function(u){return u.name;}))].sort();
+  // Summary
+  var totalDiya=people2.reduce(function(s,p){
+    return s+p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s2,e){return s2+e.amount-Number(e.paidBack||0);},0);
+  },0);
+  var totalLiya=people2.reduce(function(s,p){
+    return s+p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s2,e){return s2+e.amount-Number(e.paidBack||0);},0);
+  },0);
 
-  // Filtered list
-  var filtered=udhar.filter(function(u){
-    if(personFilter&&u.name!==personFilter) return false;
-    if(filterType==="diya") return u.type==="Diya";
-    if(filterType==="liya") return u.type==="Liya";
-    return true;
-  }).sort(function(a,b){
-    var ac=a.status==="Wapas"?1:0;
-    var bc=b.status==="Wapas"?1:0;
-    if(ac!==bc) return ac-bc;
-    return new Date(b.date)-new Date(a.date);
-  });
-
-  // SEPARATE totals - no mixing
-  var totalDiya=udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0)-Number(u.paidBack||0);},0);
-  var totalLiya=udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0)-Number(u.paidBack||0);},0);
-
-  function saveU(u){
-    var updated=editU?udhar.map(function(x){return x.id===u.id?u:x;}):udhar.concat([u]);
-    setUdhar(updated);setShowForm(false);setEditU(null);
-  }
-  function delU(id){if(window.confirm("Delete?"))setUdhar(udhar.filter(function(x){return x.id!==id;}));}
-
-  // Print single entry
-  function printSingle(u){
-    var bal=Number(u.amount||0)-Number(u.paidBack||0);
-    var html="<!DOCTYPE html><html><head><title>Udhar Note</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:30px;max-width:400px;margin:0 auto}.title{font-size:20px;font-weight:900;color:#1f2937;margin-bottom:4px;text-align:center}.sub{text-align:center;color:#6b7280;font-size:12px;margin-bottom:20px}.card{background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:20px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px}.lbl{color:#6b7280}.val{font-weight:700}.bal{text-align:center;margin-top:16px;padding:12px;background:"+(bal>0?"#fee2e2":"#dcfce7")+";border-radius:8px}.bt{font-size:11px;color:#6b7280;text-align:center;margin-top:16px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-    +"<div class='title'>Udhar Note</div>"
-    +"<div class='sub'>"+u.date+"</div>"
-    +"<div class='card'>"
-    +"<div class='row'><span class='lbl'>Naam</span><span class='val'>"+u.name+"</span></div>"
-    +(u.phone?"<div class='row'><span class='lbl'>Phone</span><span class='val'>"+u.phone+"</span></div>":"")
-    +"<div class='row'><span class='lbl'>Type</span><span class='val'>"+(u.type==="Diya"?"Diya Gaya":"Liya Gaya")+"</span></div>"
-    +"<div class='row'><span class='lbl'>Amount</span><span class='val'>"+pkr(u.amount)+"</span></div>"
-    +(u.paidBack&&Number(u.paidBack)>0?"<div class='row'><span class='lbl'>Wapas Hua</span><span class='val'>"+pkr(u.paidBack)+"</span></div>":"")
-    +(u.purpose?"<div class='row'><span class='lbl'>Wajah</span><span class='val'>"+u.purpose+"</span></div>":"")
-    +(u.sentTo?"<div class='row'><span class='lbl'>Kahan</span><span class='val'>"+u.sentTo+"</span></div>":"")
-    +(u.notes?"<div class='row'><span class='lbl'>Notes</span><span class='val'>"+u.notes+"</span></div>":"")
-    +"</div>"
-    +"<div class='bal'><div style='font-size:11px;color:#6b7280'>"+(bal>0?"Baqi Rakam":bal<0?"Extra Diya: "+pkr(Math.abs(bal)):"Clear")+"</div><div style='font-size:20px;font-weight:900;color:"+(bal>0?"#dc2626":"#16a34a")+"'>"+pkr(Math.abs(bal))+"</div></div>"
-    +"<div class='bt'><b>Payment:</b> "+'03312351419 | SadaPay / NayaPay / JazzCash / EasyPaisa'+"<br>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
-    +"</body></html>";
-    var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+  function savePeople(newPeople){
+    // Save as new structure
+    setUdhar(newPeople);
   }
 
-  // Print person full history
-  function printPersonHistory(name){
-    var entries=udhar.filter(function(u){return u.name===name;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-    var totalGiven=entries.filter(function(e){return e.type==="Diya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
-    var totalTaken=entries.filter(function(e){return e.type==="Liya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+  function addOrMergePerson(){
+    if(!newName.trim()) return;
+    var existIdx=people2.findIndex(function(p){return p.name.toLowerCase().trim()===newName.toLowerCase().trim();});
+    if(existIdx>=0){
+      // Already exists - just open their profile
+      setViewPerson(people2[existIdx]);
+      setShowPersonForm(false);
+      setNewName("");setNewPhone("");
+      setShowEntryForm(true);
+    } else {
+      var newP={id:uid("UP"),name:newName.trim(),phone:newPhone.trim(),entries:[]};
+      var updated=people2.concat([newP]);
+      savePeople(updated);
+      setViewPerson(newP);
+      setShowPersonForm(false);
+      setNewName("");setNewPhone("");
+      setShowEntryForm(true);
+    }
+  }
+
+  function addEntry(personId,entry){
+    var updated=people2.map(function(p){
+      if(p.id!==personId) return p;
+      return Object.assign({},p,{entries:p.entries.concat([Object.assign({},entry,{id:uid("UE")})])});
+    });
+    savePeople(updated);
+    // Update viewPerson
+    var vp=updated.find(function(p){return p.id===personId;});
+    if(vp) setViewPerson(vp);
+  }
+
+  function updateEntry(personId,entry){
+    var updated=people2.map(function(p){
+      if(p.id!==personId) return p;
+      return Object.assign({},p,{entries:p.entries.map(function(e){return e.id===entry.id?entry:e;})});
+    });
+    savePeople(updated);
+    var vp=updated.find(function(p){return p.id===personId;});
+    if(vp) setViewPerson(vp);
+  }
+
+  function delEntry(personId,entryId){
+    if(!window.confirm("Delete?")) return;
+    var updated=people2.map(function(p){
+      if(p.id!==personId) return p;
+      return Object.assign({},p,{entries:p.entries.filter(function(e){return e.id!==entryId;})});
+    });
+    savePeople(updated);
+    var vp=updated.find(function(p){return p.id===personId;});
+    if(vp) setViewPerson(vp);
+  }
+
+  function delPerson(personId){
+    if(!window.confirm("Is bande ka sara data delete hoga. Sure?")) return;
+    savePeople(people2.filter(function(p){return p.id!==personId;}));
+    setViewPerson(null);
+  }
+
+  function markWapas(personId,entryId){
+    var updated=people2.map(function(p){
+      if(p.id!==personId) return p;
+      return Object.assign({},p,{entries:p.entries.map(function(e){
+        return e.id===entryId?Object.assign({},e,{status:"Wapas",paidBack:e.amount}):e;
+      })});
+    });
+    savePeople(updated);
+    var vp=updated.find(function(p){return p.id===personId;});
+    if(vp) setViewPerson(vp);
+  }
+
+  function printPerson(p){
+    var entries=p.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    var totalGiven=entries.filter(function(e){return e.type==="Diya";}).reduce(function(s,e){return s+e.amount;},0);
+    var totalTaken=entries.filter(function(e){return e.type==="Liya";}).reduce(function(s,e){return s+e.amount;},0);
     var totalWapas=entries.reduce(function(s,e){return s+Number(e.paidBack||0);},0);
     var netBal=totalGiven-totalTaken-totalWapas;
     var rows=entries.map(function(e,i){
-      var bal=Number(e.amount||0)-Number(e.paidBack||0);
+      var bal=e.amount-Number(e.paidBack||0);
       return "<tr style='background:"+(i%2===0?"#fff":"#f9fafb")+"'>"
-        +"<td style='padding:8px'>"+e.date+"</td>"
-        +"<td style='padding:8px;font-weight:700;color:"+(e.type==="Diya"?"#dc2626":"#16a34a")+"'>"+(e.type==="Diya"?"Diya":"Liya")+"</td>"
-        +"<td style='padding:8px'>"+pkr(e.amount)+"</td>"
-        +"<td style='padding:8px;color:#16a34a'>"+(e.paidBack&&Number(e.paidBack)>0?pkr(e.paidBack):"--")+"</td>"
-        +"<td style='padding:8px;color:"+(bal>0?"#dc2626":"#16a34a")+";font-weight:700'>"+pkr(bal)+"</td>"
-        +"<td style='padding:8px;font-size:11px;color:#6b7280'>"+(e.purpose||"--")+"</td>"
-        +"<td style='padding:8px;font-size:11px;color:#6b7280'>"+(e.notes||"--")+"</td>"
+        +"<td style='padding:7px'>"+e.date+"</td>"
+        +"<td style='padding:7px;font-weight:700;color:"+(e.type==="Diya"?"#dc2626":"#16a34a")+"'>"+(e.type==="Diya"?"💸 Diya":"💰 Liya")+"</td>"
+        +"<td style='padding:7px;font-weight:700'>"+pkr(e.amount)+"</td>"
+        +"<td style='padding:7px;color:#16a34a'>"+(Number(e.paidBack||0)>0?pkr(e.paidBack):"--")+"</td>"
+        +"<td style='padding:7px;color:"+(bal>0?"#dc2626":"#16a34a")+";font-weight:700'>"+pkr(bal)+"</td>"
+        +"<td style='padding:7px;color:#6b7280;font-size:11px'>"+(e.purpose||"--")+"</td>"
+        +"<td style='padding:7px'><span style='background:"+(e.status==="Wapas"?"#dcfce7":"#fee2e2")+";padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700'>"+e.status+"</span></td>"
         +"</tr>";
     }).join("");
-    var html="<!DOCTYPE html><html><head><title>Hisaab: "+name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:20px;color:#1f2937}.title{font-size:22px;font-weight:900;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:16px}.cards{display:flex;gap:10px;margin-bottom:16px}.card{flex:1;border-radius:10px;padding:12px;text-align:center;border:1.5px solid #e5e7eb}.cl{font-size:9px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:3px}.cv{font-size:16px;font-weight:900}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f3f4f6;padding:8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #e5e7eb}td{border-bottom:1px solid #f3f4f6}.net{text-align:center;margin-top:16px;padding:14px;border-radius:10px;background:"+(netBal>0?"#fee2e2":netBal<0?"#dcfce7":"#f3f4f6")+"}.foot{text-align:center;color:#9ca3af;font-size:10px;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-    +"<div class='title'>Hisaab — "+name+"</div>"
-    +"<div class='sub'>"+(entries[0]?entries[0].date:"")+( entries.length>1?" se "+entries[entries.length-1].date+" tak":"")+"</div>"
+    var html="<!DOCTYPE html><html><head><title>Hisaab: "+p.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:20px;color:#1f2937;max-width:700px;margin:0 auto}.title{font-size:22px;font-weight:900;margin-bottom:2px}.sub{color:#6b7280;font-size:12px;margin-bottom:14px}.cards{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.card{flex:1;border-radius:9px;padding:10px;text-align:center;border:1.5px solid #e5e7eb}.cl{font-size:9px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:2px}.cv{font-size:15px;font-weight:900}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f3f4f6;padding:8px 7px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #e5e7eb}td{border-bottom:1px solid #f3f4f6}.net{text-align:center;margin-top:14px;padding:12px;border-radius:9px}.pay{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px}.foot{text-align:center;color:#9ca3af;font-size:10px;margin-top:12px;padding-top:8px;border-top:1px dashed #e5e7eb}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+    +"<div class='title'>Hisaab — "+p.name+"</div>"
+    +"<div class='sub'>"+(p.phone?"📞 "+p.phone+" | ":"")+(entries.length+" entries")+"</div>"
     +"<div class='cards'>"
     +"<div class='card' style='background:#fff5f5'><div class='cl'>Diya</div><div class='cv' style='color:#dc2626'>"+pkr(totalGiven)+"</div></div>"
     +"<div class='card' style='background:#f0fdf4'><div class='cl'>Liya</div><div class='cv' style='color:#16a34a'>"+pkr(totalTaken)+"</div></div>"
     +"<div class='card' style='background:#f0fdf4'><div class='cl'>Wapas</div><div class='cv' style='color:#16a34a'>"+pkr(totalWapas)+"</div></div>"
     +"</div>"
-    +"<table><tr><th>Date</th><th>Type</th><th>Amount</th><th>Wapas</th><th>Baqi</th><th>Wajah</th><th>Notes</th></tr>"+rows+"</table>"
-    +"<div class='net'><div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(netBal>0?"Aap ko milna hai":netBal<0?"Aap ko dena hai":"Barabar!")+"</div><div style='font-size:24px;font-weight:900;color:"+(netBal>0?"#dc2626":netBal<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(netBal))+"</div></div>"
-    +"<div class='foot'><b>Payment:</b> "+'03312351419 | SadaPay / NayaPay / JazzCash / EasyPaisa'+"<br>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
+    +"<table><tr><th>Date</th><th>Type</th><th>Amount</th><th>Wapas</th><th>Baqi</th><th>Wajah</th><th>Status</th></tr>"+rows+"</table>"
+    +"<div class='net' style='background:"+(netBal>0?"#fee2e2":netBal<0?"#dcfce7":"#f3f4f6")+";border:1.5px solid "+(netBal>0?"#fecaca":netBal<0?"#bbf7d0":"#e5e7eb")+"'>"
+    +"<div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(netBal>0?"Milna Hai":netBal<0?"Dena Hai":"Barabar!")+"</div>"
+    +"<div style='font-size:22px;font-weight:900;color:"+(netBal>0?"#dc2626":netBal<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(netBal))+"</div>"
+    +"</div>"
+    +"<div class='pay'>💳 Payment: <b>03312351419</b> | SadaPay / NayaPay / JazzCash / EasyPaisa</div>"
+    +"<div class='foot'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
     +"</body></html>";
     var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
   }
 
-  function UForm(fp){
-    var [f,setF]=useState(fp.u?Object.assign({},fp.u):emptyU);
-    return(
-      <Modal title={fp.isNew?"New Entry":"Edit Entry"} onClose={fp.onClose} wide={false}>
-        <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between"}}>
-          <div style={{width:"100%",marginBottom:10}}>
-            <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:5,textTransform:"uppercase"}}>Type</label>
-            <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
-              <button onClick={function(){setF(Object.assign({},f,{type:"Diya"}));}}
-                style={{flex:1,padding:"9px 0",border:"none",background:f.type==="Diya"?C.red:"transparent",color:f.type==="Diya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:13}}>
-                💸 Maine Diya
-              </button>
-              <button onClick={function(){setF(Object.assign({},f,{type:"Liya"}));}}
-                style={{flex:1,padding:"9px 0",border:"none",background:f.type==="Liya"?C.accent:"transparent",color:f.type==="Liya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:13}}>
-                💰 Maine Liya
-              </button>
-            </div>
-          </div>
-          <Field label="Naam" value={f.name} onChange={function(v){setF(Object.assign({},f,{name:v}));}} half={true}/>
-          <Field label="Phone" value={f.phone||""} onChange={function(v){setF(Object.assign({},f,{phone:v}));}} half={true}/>
-          <Field label="Amount (PKR)" value={f.amount} onChange={function(v){setF(Object.assign({},f,{amount:v}));}} type="number" half={true}/>
-          <Field label="Date" value={f.date} onChange={function(v){setF(Object.assign({},f,{date:v}));}} type="date" half={true}/>
-          <Field label="Wajah / Purpose" value={f.purpose||""} onChange={function(v){setF(Object.assign({},f,{purpose:v}));}} half={true}/>
-          <Field label="Kahan Bheja" value={f.sentTo||""} onChange={function(v){setF(Object.assign({},f,{sentTo:v}));}} half={true}/>
-          <Field label="Wapas Hua (agar kuch mila)" value={f.paidBack||""} onChange={function(v){setF(Object.assign({},f,{paidBack:v}));}} type="number" half={true}/>
-          <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Pending","Partial","Wapas"]} half={true}/>
-          <Field label="Notes" value={f.notes||""} onChange={function(v){setF(Object.assign({},f,{notes:v}));}} rows={2}/>
-        </div>
-        <button onClick={function(){fp.onSave(Object.assign({},f,{id:f.id||uid("UD")}));}}
-          style={{width:"100%",background:f.type==="Diya"?C.red:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
-          Save
-        </button>
-      </Modal>
-    );
-  }
+
+
+
+  var filteredPeople=people2.filter(function(p){
+    if(filterType==="diya") return p.entries.some(function(e){return e.type==="Diya"&&e.status!=="Wapas";});
+    if(filterType==="liya") return p.entries.some(function(e){return e.type==="Liya"&&e.status!=="Wapas";});
+    return true;
+  });
 
   return(
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
         <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Udhar / Loans 💰</h2>
-        <button onClick={function(){setEditU(null);setShowForm(true);}}
-          style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>+ New Entry</button>
+        <button onClick={function(){setShowPersonForm(true);setNewName("");setNewPhone("");}}
+          style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
+          + New / Existing Person
+        </button>
       </div>
 
-      {/* SEPARATE summary boxes */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-        {/* DIYA - red */}
-        <div style={{background:"#fff5f5",border:"2px solid #fecaca",borderRadius:14,padding:16}}>
-          <div style={{color:C.red,fontWeight:800,fontSize:13,marginBottom:10}}>💸 Maine Diya — Wapas Lena Hai</div>
-          {Object.entries(udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).reduce(function(acc,u){
-            if(!acc[u.name]) acc[u.name]={phone:u.phone||"",total:0};
-            acc[u.name].total+=Number(u.amount||0)-Number(u.paidBack||0);
-            return acc;
-          },{})).sort(function(a,b){return b[1].total-a[1].total;}).map(function(kv,i){return(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid #fecaca"}}>
-              <div>
-                <div style={{fontWeight:700,fontSize:13}}>{kv[0]}</div>
-                {kv[1].phone&&<div style={{color:C.muted,fontSize:10}}>{kv[1].phone}</div>}
+      {/* Add person form */}
+      {showPersonForm&&(
+        <div style={{background:C.accentSoft,border:"2px solid "+C.accent,borderRadius:12,padding:14,marginBottom:12}}>
+          <div style={{fontWeight:800,color:C.accent,fontSize:13,marginBottom:8}}>Naam likho — agar pehle se hai toh usi mein jaye ga</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <input value={newName} onChange={function(e){setNewName(e.target.value);}} placeholder="Naam *"
+              style={{flex:2,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"8px 10px",fontSize:13,outline:"none"}}/>
+            <input value={newPhone} onChange={function(e){setNewPhone(e.target.value);}} placeholder="Phone (optional)"
+              style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"8px 10px",fontSize:12,outline:"none"}}/>
+            <button onClick={addOrMergePerson}
+              style={{background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"8px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>
+              → Aage
+            </button>
+            <button onClick={function(){setShowPersonForm(false);}}
+              style={{background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:7,padding:"8px 10px",fontWeight:700,cursor:"pointer",fontSize:12}}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Summary - SEPARATED */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+        <div style={{background:"#fff5f5",border:"2px solid #fecaca",borderRadius:14,padding:14}}>
+          <div style={{color:C.red,fontWeight:800,fontSize:12,marginBottom:8}}>💸 Maine Diya — Milna Hai</div>
+          {people2.filter(function(p){return p.entries.some(function(e){return e.type==="Diya"&&e.status!=="Wapas";});}).map(function(p,i){
+            var bal=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
+            return bal>0?(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #fecaca"}}>
+                <div onClick={function(){setViewPerson(p);}} style={{cursor:"pointer"}}>
+                  <div style={{fontWeight:700,fontSize:12,color:C.red}}>{p.name}</div>
+                  {p.phone&&<div style={{color:C.muted,fontSize:10}}>{p.phone}</div>}
+                </div>
+                <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                  <span style={{color:C.red,fontWeight:900}}>{pkr(bal)}</span>
+                  <button onClick={function(){printPerson(p);}} style={{background:C.red,color:"#fff",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
+                </div>
               </div>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <span style={{color:C.red,fontWeight:900,fontSize:14}}>{pkr(kv[1].total)}</span>
-                <button onClick={function(){printPersonHistory(kv[0]);}}
-                  style={{background:"#dc2626",color:"#fff",border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
-              </div>
-            </div>
-          );})}
-          <div style={{marginTop:10,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:15,color:C.red}}>
+            ):null;
+          })}
+          <div style={{marginTop:8,display:"flex",justifyContent:"space-between",fontWeight:900,color:C.red,fontSize:14}}>
             <span>Total</span><span>{pkr(totalDiya)}</span>
           </div>
         </div>
-
-        {/* LIYA - green */}
-        <div style={{background:"#f0fdf4",border:"2px solid "+C.border,borderRadius:14,padding:16}}>
-          <div style={{color:C.accent,fontWeight:800,fontSize:13,marginBottom:10}}>💰 Maine Liya — Dena Hai</div>
-          {Object.entries(udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).reduce(function(acc,u){
-            if(!acc[u.name]) acc[u.name]={phone:u.phone||"",total:0};
-            acc[u.name].total+=Number(u.amount||0)-Number(u.paidBack||0);
-            return acc;
-          },{})).sort(function(a,b){return b[1].total-a[1].total;}).map(function(kv,i){return(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid "+C.border}}>
-              <div>
-                <div style={{fontWeight:700,fontSize:13}}>{kv[0]}</div>
-                {kv[1].phone&&<div style={{color:C.muted,fontSize:10}}>{kv[1].phone}</div>}
+        <div style={{background:"#f0fdf4",border:"2px solid "+C.border,borderRadius:14,padding:14}}>
+          <div style={{color:C.accent,fontWeight:800,fontSize:12,marginBottom:8}}>💰 Maine Liya — Dena Hai</div>
+          {people2.filter(function(p){return p.entries.some(function(e){return e.type==="Liya"&&e.status!=="Wapas";});}).map(function(p,i){
+            var bal=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
+            return bal>0?(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+C.border}}>
+                <div onClick={function(){setViewPerson(p);}} style={{cursor:"pointer"}}>
+                  <div style={{fontWeight:700,fontSize:12,color:C.accent}}>{p.name}</div>
+                  {p.phone&&<div style={{color:C.muted,fontSize:10}}>{p.phone}</div>}
+                </div>
+                <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                  <span style={{color:C.accent,fontWeight:900}}>{pkr(bal)}</span>
+                  <button onClick={function(){printPerson(p);}} style={{background:C.accent,color:"#fff",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
+                </div>
               </div>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <span style={{color:C.accent,fontWeight:900,fontSize:14}}>{pkr(kv[1].total)}</span>
-                <button onClick={function(){printPersonHistory(kv[0]);}}
-                  style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
-              </div>
-            </div>
-          );})}
-          <div style={{marginTop:10,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:15,color:C.accent}}>
+            ):null;
+          })}
+          <div style={{marginTop:8,display:"flex",justifyContent:"space-between",fontWeight:900,color:C.accent,fontSize:14}}>
             <span>Total</span><span>{pkr(totalLiya)}</span>
           </div>
         </div>
       </div>
 
-      {/* Filter + Person selector */}
-      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+      {/* Filter */}
+      <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
         {[["all","All"],["diya","💸 Diya"],["liya","💰 Liya"]].map(function(fl){return(
           <button key={fl[0]} onClick={function(){setFilterType(fl[0]);}}
             style={{padding:"6px 12px",border:"1.5px solid "+C.border,borderRadius:8,background:filterType===fl[0]?C.accent:"#fff",color:filterType===fl[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
             {fl[1]}
           </button>
         );})}
-        {/* Person filter */}
-        <select value={personFilter} onChange={function(e){setPersonFilter(e.target.value);}}
-          style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 10px",fontSize:11,outline:"none"}}>
-          <option value="">👤 Sab log</option>
-          {people.map(function(p){return <option key={p} value={p}>{p}</option>;})}
-        </select>
-        {/* Print */}
-        <select onChange={function(e){if(e.target.value)printPersonHistory(e.target.value);e.target.value="";}}
-          style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 10px",fontSize:11,outline:"none",marginLeft:"auto"}}>
-          <option value="">🖨️ Print kisi ka hisaab...</option>
-          {people.map(function(p){return <option key={p} value={p}>{p}</option>;})}
-        </select>
       </div>
 
-      {/* List */}
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {filtered.map(function(u){
-          var balance=Number(u.amount||0)-Number(u.paidBack||0);
-          var isDiya=u.type==="Diya";
+      {/* Person cards */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
+        {filteredPeople.map(function(p){
+          var pendingDiya=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
+          var pendingLiya=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Wapas";}).reduce(function(s,e){return s+e.amount-Number(e.paidBack||0);},0);
+          var isViewing=viewPerson&&viewPerson.id===p.id;
           return(
-            <div key={u.id} style={{background:"#fff",border:"1.5px solid "+(u.status==="Wapas"?"#bbf7d0":isDiya?"#fecaca":C.border),borderRadius:12,padding:14,opacity:u.status==="Wapas"?0.55:1,boxShadow:C.shadow}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+            <div key={p.id} style={{background:"#fff",border:"1.5px solid "+(isViewing?C.accent:C.border),borderRadius:12,padding:14,boxShadow:C.shadow}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <div>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
-                    <span style={{background:isDiya?"#fee2e2":"#dcfce7",color:isDiya?C.red:C.accent,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800}}>{isDiya?"💸 Diya":"💰 Liya"}</span>
-                    <span style={{background:u.status==="Wapas"?"#dcfce7":u.status==="Partial"?"#fef9c3":"#fee2e2",color:u.status==="Wapas"?C.accent:u.status==="Partial"?"#a16207":C.red,padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700}}>{u.status}</span>
-                  </div>
-                  <div style={{fontWeight:800,fontSize:14}}>{u.name}</div>
-                  {u.phone&&<div style={{color:C.muted,fontSize:11}}>📞 {u.phone}</div>}
+                  <div style={{fontWeight:800,fontSize:14}}>{p.name}</div>
+                  {p.phone&&<div style={{color:C.muted,fontSize:11}}>📞 {p.phone}</div>}
+                  <div style={{fontSize:10,color:C.muted}}>{p.entries.length} entries</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{color:isDiya?C.red:C.accent,fontWeight:900,fontSize:18}}>{pkr(u.amount)}</div>
-                  {u.paidBack&&Number(u.paidBack)>0&&<div style={{color:C.accent,fontSize:11}}>Wapas: {pkr(u.paidBack)}</div>}
-                  {balance>0&&u.status!=="Wapas"&&<div style={{color:C.red,fontSize:12,fontWeight:700}}>Baqi: {pkr(balance)}</div>}
+                  {pendingDiya>0&&<div style={{color:C.red,fontWeight:700,fontSize:12}}>Milna: {pkr(pendingDiya)}</div>}
+                  {pendingLiya>0&&<div style={{color:C.accent,fontWeight:700,fontSize:12}}>Dena: {pkr(pendingLiya)}</div>}
                 </div>
               </div>
-              <div style={{display:"flex",gap:10,flexWrap:"wrap",fontSize:11,color:C.muted,marginBottom:8}}>
-                <span>📅 {u.date}</span>
-                {u.purpose&&<span>📝 {u.purpose}</span>}
-                {u.sentTo&&<span>📍 {u.sentTo}</span>}
-                {u.notes&&<span>💬 {u.notes}</span>}
-              </div>
               <div style={{display:"flex",gap:5}}>
-                <button onClick={function(){printSingle(u);}}
-                  style={{background:"#f3f4f6",border:"1px solid #e5e7eb",color:"#374151",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
-                <button onClick={function(){setEditU(u);setShowForm(true);}}
-                  style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Edit</button>
-                {u.status!=="Wapas"&&<button onClick={function(){
-                  setUdhar(udhar.map(function(x){return x.id===u.id?Object.assign({},x,{status:"Wapas",paidBack:x.amount}):x;}));
-                }} style={{flex:1,background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>✅ Wapas</button>}
-                <button onClick={function(){delU(u.id);}}
-                  style={{flex:1,background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Del</button>
+                <button onClick={function(){setViewPerson(isViewing?null:p);setShowEntryForm(false);setEditEntry(null);}}
+                  style={{flex:1,background:isViewing?C.accent:C.accentSoft,border:"1px solid "+C.accent,color:isViewing?"#fff":C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                  {isViewing?"✕ Close":"👁 View"}
+                </button>
+                <button onClick={function(){setViewPerson(p);setShowEntryForm(true);setEditEntry(null);}}
+                  style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
+                  + Entry
+                </button>
+                <button onClick={function(){printPerson(p);}}
+                  style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#374151",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:11,fontWeight:700}}>🖨️</button>
               </div>
+
+              {/* Expanded view */}
+              {isViewing&&(
+                <div style={{marginTop:10,borderTop:"1px solid "+C.border,paddingTop:10}}>
+                  {showEntryForm&&viewPerson&&viewPerson.id===p.id&&(
+                    <EntryForm
+                      entry={editEntry}
+                      onSave={function(ef){
+                        if(editEntry){updateEntry(p.id,Object.assign({},editEntry,ef));}
+                        else{addEntry(p.id,ef);}
+                        setShowEntryForm(false);setEditEntry(null);
+                      }}
+                      onCancel={function(){setShowEntryForm(false);setEditEntry(null);}}
+                    />
+                  )}
+                  {!showEntryForm&&(
+                    <button onClick={function(){setShowEntryForm(true);setEditEntry(null);}}
+                      style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 0",fontWeight:700,cursor:"pointer",fontSize:12,marginBottom:8}}>
+                      + Add New Entry
+                    </button>
+                  )}
+                  {p.entries.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(e,ei){
+                    var bal=e.amount-Number(e.paidBack||0);
+                    var isDiya=e.type==="Diya";
+                    return(
+                      <div key={e.id} style={{background:e.status==="Wapas"?"#f0fdf4":"#fff",border:"1px solid "+(e.status==="Wapas"?C.border:isDiya?"#fecaca":C.border),borderRadius:8,padding:"8px 10px",marginBottom:6,opacity:e.status==="Wapas"?0.6:1}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                          <div>
+                            <span style={{background:isDiya?"#fee2e2":"#dcfce7",color:isDiya?C.red:C.accent,padding:"1px 7px",borderRadius:20,fontSize:9,fontWeight:800}}>{isDiya?"💸 Diya":"💰 Liya"}</span>
+                            <span style={{marginLeft:6,background:e.status==="Wapas"?"#dcfce7":e.status==="Partial"?"#fef9c3":"#fee2e2",color:e.status==="Wapas"?C.accent:e.status==="Partial"?"#a16207":C.red,padding:"1px 6px",borderRadius:20,fontSize:9,fontWeight:700}}>{e.status}</span>
+                            <div style={{color:C.muted,fontSize:10,marginTop:2}}>📅 {e.date}{e.purpose?" | 📝 "+e.purpose:""}</div>
+                          </div>
+                          <div style={{textAlign:"right"}}>
+                            <div style={{fontWeight:900,fontSize:14,color:isDiya?C.red:C.accent}}>{pkr(e.amount)}</div>
+                            {Number(e.paidBack||0)>0&&<div style={{color:C.accent,fontSize:10}}>Wapas: {pkr(e.paidBack)}</div>}
+                            {bal>0&&e.status!=="Wapas"&&<div style={{color:C.red,fontSize:11,fontWeight:700}}>Baqi: {pkr(bal)}</div>}
+                          </div>
+                        </div>
+                        {e.notes&&<div style={{color:C.muted,fontSize:10,marginTop:3}}>💬 {e.notes}</div>}
+                        <div style={{display:"flex",gap:4,marginTop:6}}>
+                          <button onClick={function(){setEditEntry(e);setShowEntryForm(true);}}
+                            style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>Edit</button>
+                          {e.status!=="Wapas"&&<button onClick={function(){markWapas(p.id,e.id);}}
+                            style={{background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>✅ Wapas</button>}
+                          <button onClick={function(){delEntry(p.id,e.id);}}
+                            style={{background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>Del</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button onClick={function(){delPerson(p.id);}}
+                    style={{width:"100%",background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:10,fontWeight:600,marginTop:4}}>
+                    🗑 Delete {p.name} ka sara data
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
-        {filtered.length===0&&<div style={{padding:"30px",textAlign:"center",color:C.muted}}>Koi entry nahi</div>}
+        {filteredPeople.length===0&&<div style={{gridColumn:"1/-1",padding:"30px",textAlign:"center",color:C.muted}}>Koi entry nahi — "+ New / Existing Person" click karein</div>}
       </div>
-
-      {showForm&&<UForm u={editU} isNew={!editU} onSave={saveU} onClose={function(){setShowForm(false);setEditU(null);}}/>}
     </div>
   );
 }
