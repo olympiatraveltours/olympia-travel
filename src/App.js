@@ -1271,6 +1271,178 @@ function ExpenseAdder(props){
 
 
 
+
+// ─── USER EDITOR COMPONENT ─────────────────────────────────
+function UserEditor(ep){
+  var u=ep.user;
+  var saveUser=ep.saveUser;
+  var delStaff=ep.delStaff;
+  var sections=ep.sections||[];
+  var sectionLabels=ep.sectionLabels||{};
+  var [name,setName]=useState(u.name);
+  var [pass,setPass]=useState(u.password);
+  var [tabs,setTabs]=useState(Array.isArray(u.tabs)?u.tabs:[]);
+
+  function toggleTab(id){
+    setTabs(tabs.includes(id)?tabs.filter(function(t){return t!==id;}):tabs.concat([id]));
+  }
+
+  return(
+    <div style={{background:"#fff",border:"2px solid "+C.accent,borderRadius:14,padding:18,marginBottom:14}}>
+      <div style={{fontWeight:800,color:C.accent,fontSize:14,marginBottom:12}}>
+        ✏️ Editing: {u.name}
+        {u.role!=="admin"&&<button onClick={function(){delStaff(u.id);}} style={{float:"right",background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>Delete Staff</button>}
+      </div>
+
+      <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:150}}>
+          <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>Name</label>
+          <input value={name} onChange={function(e){setName(e.target.value);}} disabled={u.role==="admin"}
+            style={{width:"100%",background:u.role==="admin"?"#f3f4f6":C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,padding:"8px 10px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1,minWidth:150}}>
+          <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:4,textTransform:"uppercase"}}>Password</label>
+          <input value={pass} onChange={function(e){setPass(e.target.value);}}
+            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:8,padding:"8px 10px",fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"monospace"}}/>
+        </div>
+      </div>
+
+      {u.role!=="admin"&&(
+        <div>
+          <label style={{display:"block",color:C.accent,fontSize:10,fontWeight:700,marginBottom:8,textTransform:"uppercase"}}>
+            Access — Kaunse Sections Dikhein
+          </label>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+            {sections.map(function(s){
+              var isOn=tabs.includes(s.id);
+              return(
+                <button key={s.id} onClick={function(){toggleTab(s.id);}}
+                  style={{padding:"7px 14px",border:"2px solid "+(isOn?C.accent:C.border),borderRadius:9,background:isOn?C.accent:"#fff",color:isOn?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:12,transition:"all .15s"}}>
+                  {isOn?"✅ ":"⬜ "}{s.label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{background:C.accentSoft,borderRadius:8,padding:"8px 12px",fontSize:11,color:C.muted,marginBottom:12}}>
+            ✅ Selected: {tabs.map(function(t){return sectionLabels[t]||t;}).join(", ")||"Koi nahi"}
+          </div>
+        </div>
+      )}
+
+      {u.role==="admin"&&(
+        <div style={{background:"#f0fdf4",borderRadius:8,padding:"8px 12px",fontSize:11,color:C.accent,marginBottom:12}}>
+          🔑 Admin — Hamesha sab sections ka access hoga
+        </div>
+      )}
+
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={function(){saveUser(Object.assign({},u,{name:name,password:pass,tabs:u.role==="admin"?null:tabs}));}}
+          style={{flex:2,background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"10px 0",fontWeight:800,cursor:"pointer",fontSize:13}}>
+          💾 Save Changes
+        </button>
+        <button onClick={function(){setEditUser(null);}}
+          style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:8,padding:"10px 0",fontWeight:700,cursor:"pointer",fontSize:12}}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── ACCESS CONTROL TAB ──────────────────────────────────────
+function AccessControlTab(props){
+  var usersConfig=props.usersConfig;
+  var saveUsersConfig=props.saveUsersConfig;
+  var sectionLabels=props.sectionLabels||{};
+  var allSections=props.allSections||[];
+  var users=Array.isArray(usersConfig.users)?usersConfig.users:[];
+
+  var [editUser,setEditUser]=useState(null);
+  var [msg,setMsg]=useState("");
+
+  // All sections with labels
+  var sections=allSections.map(function(id){return {id:id,label:sectionLabels[id]||id};});
+
+  function saveUser(updatedUser){
+    var newUsers=users.map(function(u){return u.id===updatedUser.id?updatedUser:u;});
+    saveUsersConfig(Object.assign({},usersConfig,{users:newUsers}));
+    setEditUser(null);
+    setMsg("Saved! Staff ko logout/login karna hoga changes ke liye.");
+    setTimeout(function(){setMsg("");},3000);
+  }
+
+  function addStaff(){
+    var id="staff"+Date.now();
+    var newU={id:id,name:"New Staff",password:"pass123",role:"staff",tabs:["bookings","queries"]};
+    var newUsers=users.concat([newU]);
+    saveUsersConfig(Object.assign({},usersConfig,{users:newUsers}));
+    setEditUser(newU);
+  }
+
+  function delStaff(id){
+    if(!window.confirm("Delete this staff?")) return;
+    saveUsersConfig(Object.assign({},usersConfig,{users:users.filter(function(u){return u.id!==id;})}));
+  }
+
+
+
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div>
+          <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>⚙️ Access Control</h2>
+          <div style={{color:C.muted,fontSize:11,marginTop:2}}>Staff IDs, passwords aur section access manage karein</div>
+        </div>
+        <button onClick={addStaff}
+          style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
+          + Add Staff
+        </button>
+      </div>
+
+      {msg&&<div style={{background:"#dcfce7",border:"1px solid "+C.border,borderRadius:8,padding:"10px 14px",marginBottom:12,color:C.accent,fontWeight:700,fontSize:12}}>✅ {msg}</div>}
+
+      {/* Edit panel */}
+      {editUser&&<UserEditor user={editUser} saveUser={saveUser} delStaff={delStaff} sections={sections} sectionLabels={sectionLabels}/>}
+
+      {/* Users list */}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {users.map(function(u){
+          var isAdmin=u.role==="admin";
+          var tabs=Array.isArray(u.tabs)?u.tabs:[];
+          return(
+            <div key={u.id} style={{background:"#fff",border:"1.5px solid "+(editUser&&editUser.id===u.id?C.accent:C.border),borderRadius:12,padding:16,boxShadow:C.shadow}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{background:isAdmin?"#fef9c3":C.accentSoft,border:"1.5px solid "+(isAdmin?"#fde68a":C.border),borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:isAdmin?C.gold:C.accent}}>
+                    {isAdmin?"🔑 Admin":"👤 Staff"}
+                  </div>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:14}}>{u.name}</div>
+                    <div style={{color:C.muted,fontSize:11}}>ID: <span style={{fontFamily:"monospace",fontWeight:700}}>{u.id}</span> | Pass: <span style={{fontFamily:"monospace"}}>{u.password}</span></div>
+                  </div>
+                </div>
+                <button onClick={function(){setEditUser(editUser&&editUser.id===u.id?null:u);}}
+                  style={{background:editUser&&editUser.id===u.id?"#fee2e2":"#fffbeb",border:"1px solid "+(editUser&&editUser.id===u.id?"#fecaca":"#fde68a"),color:editUser&&editUser.id===u.id?C.red:C.gold,borderRadius:7,padding:"6px 14px",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                  {editUser&&editUser.id===u.id?"✕ Close":"✏️ Edit"}
+                </button>
+              </div>
+              {!isAdmin&&(
+                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                  {tabs.length>0?tabs.map(function(t){return(
+                    <span key={t} style={{background:C.accentSoft,color:C.accent,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{sectionLabels[t]||t}</span>
+                  );}):(<span style={{color:C.muted,fontSize:11}}>Koi access nahi</span>)}
+                </div>
+              )}
+              {isAdmin&&<div style={{color:C.muted,fontSize:11}}>✅ Sab sections ka access</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── STAFF EXPENSES TAB ──────────────────────────────────────
 function StaffExpTab(props){
   var staffExp=Array.isArray(props.staffExp)?props.staffExp:[];
@@ -1442,7 +1614,12 @@ function UdharTab(props){
   var [showForm,setShowForm]=useState(false);
   var [editU,setEditU]=useState(null);
   var [filterType,setFilterType]=useState("all");
+  var [histPerson,setHistPerson]=useState(null);
 
+  // All unique people
+  var people=[...new Set(udhar.map(function(u){return u.name;}))].sort();
+
+  // Filtered list
   var filtered=udhar.filter(function(u){
     if(filterType==="diya") return u.type==="Diya";
     if(filterType==="liya") return u.type==="Liya";
@@ -1454,14 +1631,71 @@ function UdharTab(props){
     return new Date(b.date)-new Date(a.date);
   });
 
-  var totalDiya=udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0);},0);
-  var totalLiya=udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0);},0);
+  // SEPARATE totals - no mixing
+  var totalDiya=udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0)-Number(u.paidBack||0);},0);
+  var totalLiya=udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).reduce(function(s,u){return s+Number(u.amount||0)-Number(u.paidBack||0);},0);
 
   function saveU(u){
     var updated=editU?udhar.map(function(x){return x.id===u.id?u:x;}):udhar.concat([u]);
     setUdhar(updated);setShowForm(false);setEditU(null);
   }
   function delU(id){if(window.confirm("Delete?"))setUdhar(udhar.filter(function(x){return x.id!==id;}));}
+
+  // Print single entry
+  function printSingle(u){
+    var bal=Number(u.amount||0)-Number(u.paidBack||0);
+    var html="<!DOCTYPE html><html><head><title>Udhar Note</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:30px;max-width:400px;margin:0 auto}.title{font-size:20px;font-weight:900;color:#1f2937;margin-bottom:4px;text-align:center}.sub{text-align:center;color:#6b7280;font-size:12px;margin-bottom:20px}.card{background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:20px}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px}.lbl{color:#6b7280}.val{font-weight:700}.bal{text-align:center;margin-top:16px;padding:12px;background:"+(bal>0?"#fee2e2":"#dcfce7")+";border-radius:8px}.bt{font-size:11px;color:#6b7280;text-align:center;margin-top:16px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+    +"<div class='title'>Udhar Note</div>"
+    +"<div class='sub'>"+u.date+"</div>"
+    +"<div class='card'>"
+    +"<div class='row'><span class='lbl'>Naam</span><span class='val'>"+u.name+"</span></div>"
+    +(u.phone?"<div class='row'><span class='lbl'>Phone</span><span class='val'>"+u.phone+"</span></div>":"")
+    +"<div class='row'><span class='lbl'>Type</span><span class='val'>"+(u.type==="Diya"?"Diya Gaya":"Liya Gaya")+"</span></div>"
+    +"<div class='row'><span class='lbl'>Amount</span><span class='val'>"+pkr(u.amount)+"</span></div>"
+    +(u.paidBack&&Number(u.paidBack)>0?"<div class='row'><span class='lbl'>Wapas Hua</span><span class='val'>"+pkr(u.paidBack)+"</span></div>":"")
+    +(u.purpose?"<div class='row'><span class='lbl'>Wajah</span><span class='val'>"+u.purpose+"</span></div>":"")
+    +(u.sentTo?"<div class='row'><span class='lbl'>Kahan</span><span class='val'>"+u.sentTo+"</span></div>":"")
+    +(u.notes?"<div class='row'><span class='lbl'>Notes</span><span class='val'>"+u.notes+"</span></div>":"")
+    +"</div>"
+    +"<div class='bal'><div style='font-size:11px;color:#6b7280'>"+(bal>0?"Baqi Rakam":bal<0?"Extra Diya: "+pkr(Math.abs(bal)):"Clear")+"</div><div style='font-size:20px;font-weight:900;color:"+(bal>0?"#dc2626":"#16a34a")+"'>"+pkr(Math.abs(bal))+"</div></div>"
+    +"<div class='bt'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
+    +"</body></html>";
+    var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+  }
+
+  // Print person full history
+  function printPersonHistory(name){
+    var entries=udhar.filter(function(u){return u.name===name;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    var totalGiven=entries.filter(function(e){return e.type==="Diya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+    var totalTaken=entries.filter(function(e){return e.type==="Liya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+    var totalWapas=entries.reduce(function(s,e){return s+Number(e.paidBack||0);},0);
+    var netBal=totalGiven-totalTaken-totalWapas;
+    var rows=entries.map(function(e,i){
+      var bal=Number(e.amount||0)-Number(e.paidBack||0);
+      return "<tr style='background:"+(i%2===0?"#fff":"#f9fafb")+"'>"
+        +"<td style='padding:8px'>"+e.date+"</td>"
+        +"<td style='padding:8px;font-weight:700;color:"+(e.type==="Diya"?"#dc2626":"#16a34a")+"'>"+(e.type==="Diya"?"Diya":"Liya")+"</td>"
+        +"<td style='padding:8px'>"+pkr(e.amount)+"</td>"
+        +"<td style='padding:8px;color:#16a34a'>"+(e.paidBack&&Number(e.paidBack)>0?pkr(e.paidBack):"--")+"</td>"
+        +"<td style='padding:8px;color:"+(bal>0?"#dc2626":"#16a34a")+";font-weight:700'>"+pkr(bal)+"</td>"
+        +"<td style='padding:8px;font-size:11px;color:#6b7280'>"+(e.purpose||"--")+"</td>"
+        +"<td style='padding:8px;font-size:11px;color:#6b7280'>"+(e.notes||"--")+"</td>"
+        +"</tr>";
+    }).join("");
+    var html="<!DOCTYPE html><html><head><title>Hisaab: "+name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:20px;color:#1f2937}.title{font-size:22px;font-weight:900;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:16px}.cards{display:flex;gap:10px;margin-bottom:16px}.card{flex:1;border-radius:10px;padding:12px;text-align:center;border:1.5px solid #e5e7eb}.cl{font-size:9px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:3px}.cv{font-size:16px;font-weight:900}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f3f4f6;padding:8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #e5e7eb}td{border-bottom:1px solid #f3f4f6}.net{text-align:center;margin-top:16px;padding:14px;border-radius:10px;background:"+(netBal>0?"#fee2e2":netBal<0?"#dcfce7":"#f3f4f6")+"}.foot{text-align:center;color:#9ca3af;font-size:10px;margin-top:14px;padding-top:10px;border-top:1px dashed #e5e7eb}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+    +"<div class='title'>Hisaab — "+name+"</div>"
+    +"<div class='sub'>"+(entries[0]?entries[0].date:"")+( entries.length>1?" se "+entries[entries.length-1].date+" tak":"")+"</div>"
+    +"<div class='cards'>"
+    +"<div class='card' style='background:#fff5f5'><div class='cl'>Diya</div><div class='cv' style='color:#dc2626'>"+pkr(totalGiven)+"</div></div>"
+    +"<div class='card' style='background:#f0fdf4'><div class='cl'>Liya</div><div class='cv' style='color:#16a34a'>"+pkr(totalTaken)+"</div></div>"
+    +"<div class='card' style='background:#f0fdf4'><div class='cl'>Wapas</div><div class='cv' style='color:#16a34a'>"+pkr(totalWapas)+"</div></div>"
+    +"</div>"
+    +"<table><tr><th>Date</th><th>Type</th><th>Amount</th><th>Wapas</th><th>Baqi</th><th>Wajah</th><th>Notes</th></tr>"+rows+"</table>"
+    +"<div class='net'><div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(netBal>0?"Aap ko milna hai":netBal<0?"Aap ko dena hai":"Barabar!")+"</div><div style='font-size:24px;font-weight:900;color:"+(netBal>0?"#dc2626":netBal<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(netBal))+"</div></div>"
+    +"<div class='foot'>Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
+    +"</body></html>";
+    var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
+  }
 
   function UForm(fp){
     var [f,setF]=useState(fp.u?Object.assign({},fp.u):emptyU);
@@ -1473,21 +1707,21 @@ function UdharTab(props){
             <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
               <button onClick={function(){setF(Object.assign({},f,{type:"Diya"}));}}
                 style={{flex:1,padding:"9px 0",border:"none",background:f.type==="Diya"?C.red:"transparent",color:f.type==="Diya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:13}}>
-                💸 Maine Diya (I Gave)
+                💸 Maine Diya
               </button>
               <button onClick={function(){setF(Object.assign({},f,{type:"Liya"}));}}
                 style={{flex:1,padding:"9px 0",border:"none",background:f.type==="Liya"?C.accent:"transparent",color:f.type==="Liya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:13}}>
-                💰 Maine Liya (I Took)
+                💰 Maine Liya
               </button>
             </div>
           </div>
-          <Field label="Naam (Jis se liya/diya)" value={f.name} onChange={function(v){setF(Object.assign({},f,{name:v}));}} half={true}/>
+          <Field label="Naam" value={f.name} onChange={function(v){setF(Object.assign({},f,{name:v}));}} half={true}/>
           <Field label="Phone" value={f.phone||""} onChange={function(v){setF(Object.assign({},f,{phone:v}));}} half={true}/>
           <Field label="Amount (PKR)" value={f.amount} onChange={function(v){setF(Object.assign({},f,{amount:v}));}} type="number" half={true}/>
           <Field label="Date" value={f.date} onChange={function(v){setF(Object.assign({},f,{date:v}));}} type="date" half={true}/>
-          <Field label="Purpose / Wajah" value={f.purpose||""} onChange={function(v){setF(Object.assign({},f,{purpose:v}));}} half={true}/>
-          <Field label="Kahan Bheja / Received From" value={f.sentTo||""} onChange={function(v){setF(Object.assign({},f,{sentTo:v}));}} half={true}/>
-          <Field label="Amount Wapas (agar kuch mila)" value={f.paidBack||""} onChange={function(v){setF(Object.assign({},f,{paidBack:v}));}} type="number" half={true}/>
+          <Field label="Wajah / Purpose" value={f.purpose||""} onChange={function(v){setF(Object.assign({},f,{purpose:v}));}} half={true}/>
+          <Field label="Kahan Bheja" value={f.sentTo||""} onChange={function(v){setF(Object.assign({},f,{sentTo:v}));}} half={true}/>
+          <Field label="Wapas Hua (agar kuch mila)" value={f.paidBack||""} onChange={function(v){setF(Object.assign({},f,{paidBack:v}));}} type="number" half={true}/>
           <Field label="Status" value={f.status} onChange={function(v){setF(Object.assign({},f,{status:v}));}} options={["Pending","Partial","Wapas"]} half={true}/>
           <Field label="Notes" value={f.notes||""} onChange={function(v){setF(Object.assign({},f,{notes:v}));}} rows={2}/>
         </div>
@@ -1507,33 +1741,73 @@ function UdharTab(props){
           style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>+ New Entry</button>
       </div>
 
-      {/* Summary */}
-      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-        <div style={{flex:1,background:"#fee2e2",border:"1.5px solid #fecaca",borderRadius:12,padding:"14px",textAlign:"center"}}>
-          <div style={{color:C.red,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Maine Diya (Wapas Lena Hai)</div>
-          <div style={{color:C.red,fontWeight:900,fontSize:22}}>{pkr(totalDiya)}</div>
-          <div style={{color:C.muted,fontSize:10}}>{udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).length} pending entries</div>
+      {/* SEPARATE summary boxes */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+        {/* DIYA - red */}
+        <div style={{background:"#fff5f5",border:"2px solid #fecaca",borderRadius:14,padding:16}}>
+          <div style={{color:C.red,fontWeight:800,fontSize:13,marginBottom:10}}>💸 Maine Diya — Wapas Lena Hai</div>
+          {Object.entries(udhar.filter(function(u){return u.type==="Diya"&&u.status!=="Wapas";}).reduce(function(acc,u){
+            if(!acc[u.name]) acc[u.name]={phone:u.phone||"",total:0};
+            acc[u.name].total+=Number(u.amount||0)-Number(u.paidBack||0);
+            return acc;
+          },{})).sort(function(a,b){return b[1].total-a[1].total;}).map(function(kv,i){return(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid #fecaca"}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:13}}>{kv[0]}</div>
+                {kv[1].phone&&<div style={{color:C.muted,fontSize:10}}>{kv[1].phone}</div>}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <span style={{color:C.red,fontWeight:900,fontSize:14}}>{pkr(kv[1].total)}</span>
+                <button onClick={function(){printPersonHistory(kv[0]);}}
+                  style={{background:"#dc2626",color:"#fff",border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
+              </div>
+            </div>
+          );})}
+          <div style={{marginTop:10,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:15,color:C.red}}>
+            <span>Total</span><span>{pkr(totalDiya)}</span>
+          </div>
         </div>
-        <div style={{flex:1,background:"#dcfce7",border:"1.5px solid "+C.border,borderRadius:12,padding:"14px",textAlign:"center"}}>
-          <div style={{color:C.accent,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Maine Liya (Dena Hai)</div>
-          <div style={{color:C.accent,fontWeight:900,fontSize:22}}>{pkr(totalLiya)}</div>
-          <div style={{color:C.muted,fontSize:10}}>{udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).length} pending entries</div>
-        </div>
-        <div style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:12,padding:"14px",textAlign:"center"}}>
-          <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:3}}>Net Position</div>
-          <div style={{color:(totalDiya-totalLiya)>=0?C.red:C.accent,fontWeight:900,fontSize:22}}>{pkr(Math.abs(totalDiya-totalLiya))}</div>
-          <div style={{color:C.muted,fontSize:10}}>{totalDiya>=totalLiya?"Aap ko milna hai":"Aap ko dena hai"}</div>
+
+        {/* LIYA - green */}
+        <div style={{background:"#f0fdf4",border:"2px solid "+C.border,borderRadius:14,padding:16}}>
+          <div style={{color:C.accent,fontWeight:800,fontSize:13,marginBottom:10}}>💰 Maine Liya — Dena Hai</div>
+          {Object.entries(udhar.filter(function(u){return u.type==="Liya"&&u.status!=="Wapas";}).reduce(function(acc,u){
+            if(!acc[u.name]) acc[u.name]={phone:u.phone||"",total:0};
+            acc[u.name].total+=Number(u.amount||0)-Number(u.paidBack||0);
+            return acc;
+          },{})).sort(function(a,b){return b[1].total-a[1].total;}).map(function(kv,i){return(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid "+C.border}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:13}}>{kv[0]}</div>
+                {kv[1].phone&&<div style={{color:C.muted,fontSize:10}}>{kv[1].phone}</div>}
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <span style={{color:C.accent,fontWeight:900,fontSize:14}}>{pkr(kv[1].total)}</span>
+                <button onClick={function(){printPersonHistory(kv[0]);}}
+                  style={{background:C.accent,color:"#fff",border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
+              </div>
+            </div>
+          );})}
+          <div style={{marginTop:10,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:15,color:C.accent}}>
+            <span>Total</span><span>{pkr(totalLiya)}</span>
+          </div>
         </div>
       </div>
 
       {/* Filter */}
-      <div style={{display:"flex",gap:6,marginBottom:12}}>
-        {[["all","All"],["diya","💸 Maine Diya"],["liya","💰 Maine Liya"]].map(function(fl){return(
+      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+        {[["all","All"],["diya","💸 Diya"],["liya","💰 Liya"]].map(function(fl){return(
           <button key={fl[0]} onClick={function(){setFilterType(fl[0]);}}
             style={{padding:"6px 12px",border:"1.5px solid "+C.border,borderRadius:8,background:filterType===fl[0]?C.accent:"#fff",color:filterType===fl[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
             {fl[1]}
           </button>
         );})}
+        {/* Person history filter */}
+        <select onChange={function(e){if(e.target.value)printPersonHistory(e.target.value);e.target.value="";}}
+          style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"6px 10px",fontSize:11,outline:"none",marginLeft:"auto"}}>
+          <option value="">🖨️ Print kisi ka hisaab...</option>
+          {people.map(function(p){return <option key={p} value={p}>{p}</option>;})}
+        </select>
       </div>
 
       {/* List */}
@@ -1542,12 +1816,12 @@ function UdharTab(props){
           var balance=Number(u.amount||0)-Number(u.paidBack||0);
           var isDiya=u.type==="Diya";
           return(
-            <div key={u.id} style={{background:"#fff",border:"1.5px solid "+(u.status==="Wapas"?"#bbf7d0":isDiya?"#fecaca":C.border),borderRadius:12,padding:14,opacity:u.status==="Wapas"?0.6:1,boxShadow:C.shadow}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+            <div key={u.id} style={{background:"#fff",border:"1.5px solid "+(u.status==="Wapas"?"#bbf7d0":isDiya?"#fecaca":C.border),borderRadius:12,padding:14,opacity:u.status==="Wapas"?0.55:1,boxShadow:C.shadow}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                 <div>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                    <span style={{background:isDiya?"#fee2e2":"#dcfce7",color:isDiya?C.red:C.accent,padding:"2px 9px",borderRadius:20,fontSize:10,fontWeight:800}}>{isDiya?"💸 Diya":"💰 Liya"}</span>
-                    <span style={{background:u.status==="Wapas"?"#dcfce7":u.status==="Partial"?"#fef9c3":"#fee2e2",color:u.status==="Wapas"?C.accent:u.status==="Partial"?"#a16207":C.red,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{u.status}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                    <span style={{background:isDiya?"#fee2e2":"#dcfce7",color:isDiya?C.red:C.accent,padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:800}}>{isDiya?"💸 Diya":"💰 Liya"}</span>
+                    <span style={{background:u.status==="Wapas"?"#dcfce7":u.status==="Partial"?"#fef9c3":"#fee2e2",color:u.status==="Wapas"?C.accent:u.status==="Partial"?"#a16207":C.red,padding:"2px 7px",borderRadius:20,fontSize:9,fontWeight:700}}>{u.status}</span>
                   </div>
                   <div style={{fontWeight:800,fontSize:14}}>{u.name}</div>
                   {u.phone&&<div style={{color:C.muted,fontSize:11}}>📞 {u.phone}</div>}
@@ -1564,13 +1838,14 @@ function UdharTab(props){
                 {u.sentTo&&<span>📍 {u.sentTo}</span>}
                 {u.notes&&<span>💬 {u.notes}</span>}
               </div>
-              <div style={{display:"flex",gap:6}}>
+              <div style={{display:"flex",gap:5}}>
+                <button onClick={function(){printSingle(u);}}
+                  style={{background:"#f3f4f6",border:"1px solid #e5e7eb",color:"#374151",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
                 <button onClick={function(){setEditU(u);setShowForm(true);}}
                   style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Edit</button>
                 {u.status!=="Wapas"&&<button onClick={function(){
-                  var updated=udhar.map(function(x){return x.id===u.id?Object.assign({},x,{status:"Wapas",paidBack:x.amount}):x;});
-                  setUdhar(updated);
-                }} style={{flex:1,background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>✅ Wapas Ho Gaya</button>}
+                  setUdhar(udhar.map(function(x){return x.id===u.id?Object.assign({},x,{status:"Wapas",paidBack:x.amount}):x;}));
+                }} style={{flex:1,background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>✅ Wapas</button>}
                 <button onClick={function(){delU(u.id);}}
                   style={{flex:1,background:C.redBg,border:"1px solid #fecaca",color:C.red,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>Del</button>
               </div>
@@ -1584,6 +1859,7 @@ function UdharTab(props){
     </div>
   );
 }
+
 
 // ─── GROUPS TAB ─────────────────────────────────────────────
 function GroupsTab(props){
@@ -2279,8 +2555,8 @@ export default function App(){
       if(!u) return null;
       var parsed=JSON.parse(u);
       // Validate user exists in USERS list
-      var validIds=["admin","staff1","staff2"];
-      if(!parsed||!parsed.id||!validIds.includes(parsed.id)) {
+      // Accept any saved user - will be validated after usersConfig loads
+      if(!parsed||!parsed.id) {
         localStorage.removeItem("olympia_user");
         return null;
       }
@@ -2315,14 +2591,34 @@ export default function App(){
 
   function showToast(){setToast(true);setTimeout(function(){setToast(false);},2000);}
 
-  var USERS=[
-    {id:"admin",  name:"Admin",   password:"olympia2026", role:"admin"},
-    {id:"staff1", name:"Staff 1", password:"staff123",    role:"staff"},
-    {id:"staff2", name:"Staff 2", password:"staff456",    role:"staff"},
-  ];
-  var ADMIN_TABS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries"];
+  var ALL_SECTION_IDS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries"];
+  var SECTION_LABELS={dashboard:"Dashboard",bookings:"Bookings",customers:"Customers",expenses:"Expenses",reports:"Reports",partners:"Partners",groups:"Groups",udhar:"Udhar",staffexp:"Staff Expenses",personal:"My Expenses",marketing:"Marketing",queries:"Queries"};
+  var DEFAULT_USERS={users:[
+    {id:"admin",  name:"Admin",   password:"olympia2026", role:"admin", tabs:null},
+    {id:"staff1", name:"Staff 1", password:"staff123",    role:"staff", tabs:["bookings","queries","groups","staffexp"]},
+    {id:"staff2", name:"Staff 2", password:"staff456",    role:"staff", tabs:["bookings","queries","groups","staffexp"]},
+  ]};
+  var [usersConfig,setUsersConfigR]=useState(function(){
+    try{
+      var d=ld("olympia_users_config",null);
+      if(d&&Array.isArray(d.users)&&d.users.length>0) return d;
+    }catch(e){}
+    return DEFAULT_USERS;
+  });
+  function saveUsersConfig(cfg){
+    setUsersConfigR(cfg);
+    sv("olympia_users_config",cfg);
+    fbSave("olympia_users_config",cfg);
+  }
+  var USERS=Array.isArray(usersConfig&&usersConfig.users)?usersConfig.users:DEFAULT_USERS.users;
+  var ADMIN_TABS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries","access"];
   var STAFF_TABS=["bookings","queries","groups","staffexp"];
-  function getAccessTabs(role){return role==="admin"?ADMIN_TABS:STAFF_TABS;}
+  function getAccessTabs(role,userId){
+    if(role==="admin") return ADMIN_TABS;
+    var u=USERS.find(function(x){return x.id===userId;});
+    if(u&&Array.isArray(u.tabs)) return u.tabs;
+    return STAFF_TABS;
+  }
 
   function doLogin(){
     var u=USERS.find(function(x){return x.id===loginId&&x.password===loginPw;});
@@ -2501,8 +2797,9 @@ export default function App(){
     {id:"groups",l:"Groups"},{id:"udhar",l:"Udhar 💰"},
     {id:"staffexp",l:"Staff Expenses"},{id:"personal",l:"My Expenses"},
     {id:"marketing",l:"Marketing"},{id:"queries",l:"Queries"},
+    {id:"access",l:"⚙️ Access Control"},
   ];
-  var accessTabs=currentUser?getAccessTabs(currentUser.role):[];
+  var accessTabs=currentUser?getAccessTabs(currentUser.role,currentUser.id):[];
   var TABS=ALL_TABS.filter(function(t){return accessTabs.includes(t.id);});
 
   // LOGIN SCREEN
@@ -3038,6 +3335,7 @@ export default function App(){
         )}
                 {tab==="marketing"&&<Marketing packages={packages} setPackages={setP} customers={customers} showToast={showToast}/>}
         {tab==="queries"&&<QueriesTab queries={queries} setQueries={setQueries} currentUser={currentUser}/>}
+        {tab==="access"&&<AccessControlTab usersConfig={usersConfig} saveUsersConfig={saveUsersConfig} sectionLabels={SECTION_LABELS} allSections={ALL_SECTION_IDS}/>}
         {tab==="groups"&&<GroupsTab groups={groups} setGroups={setGroups} customers={customers}/>}
         {tab==="udhar"&&<UdharTab udhar={udhar} setUdhar={setUdhar}/>}
         {tab==="staffexp"&&<StaffExpTab staffExp={staffExp} setStaffExp={setStaffExp} currentUser={currentUser} expenses={expenses} setE={setE}/>}
