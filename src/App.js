@@ -1697,9 +1697,9 @@ function UdharTab(props){
 
   var [viewPerson,setViewPerson]=useState(null);
   var [showPersonForm,setShowPersonForm]=useState(false);
-  var [showEntryForm,setShowEntryForm]=useState(false);
+  var [activeEntryId,setActiveEntryId]=useState(null); // personId which has entry form open
   var [editEntry,setEditEntry]=useState(null);
-  var [editPersonData,setEditPersonData]=useState(null);
+  var [editPersonObj,setEditPersonObj]=useState(null); // person being edited
   var [newName,setNewName]=useState("");
   var [newPhone,setNewPhone]=useState("");
   var [filterType,setFilterType]=useState("all");
@@ -1725,7 +1725,7 @@ function UdharTab(props){
       setViewPerson(people2[existIdx]);
       setShowPersonForm(false);
       setNewName("");setNewPhone("");
-      setShowEntryForm(true);
+      setActiveEntryId(viewPerson?viewPerson.id:null);
     } else {
       var newP={id:uid("UP"),name:newName.trim(),phone:newPhone.trim(),entries:[]};
       var updated=people2.concat([newP]);
@@ -1733,7 +1733,7 @@ function UdharTab(props){
       setViewPerson(newP);
       setShowPersonForm(false);
       setNewName("");setNewPhone("");
-      setShowEntryForm(true);
+      setActiveEntryId(viewPerson?viewPerson.id:null);
     }
   }
 
@@ -1940,11 +1940,11 @@ function UdharTab(props){
                 </div>
               </div>
               <div style={{display:"flex",gap:5}}>
-                <button onClick={function(){setViewPerson(isViewing?null:p);setShowEntryForm(false);setEditEntry(null);}}
+                <button onClick={function(){setViewPerson(isViewing?null:p);setActiveEntryId(null);setEditEntry(null);}}
                   style={{flex:1,background:isViewing?C.accent:C.accentSoft,border:"1px solid "+C.accent,color:isViewing?"#fff":C.accent,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
                   {isViewing?"✕ Close":"👁 View"}
                 </button>
-                <button onClick={function(){setViewPerson(p);setShowEntryForm(true);setEditEntry(null);}}
+                <button onClick={function(){setViewPerson(p);setActiveEntryId(viewPerson?viewPerson.id:null);setEditEntry(null);}}
                   style={{flex:1,background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:7,padding:"5px 0",cursor:"pointer",fontSize:11,fontWeight:700}}>
                   + Entry
                 </button>
@@ -1955,19 +1955,41 @@ function UdharTab(props){
               {/* Expanded view */}
               {isViewing&&(
                 <div style={{marginTop:10,borderTop:"1px solid "+C.border,paddingTop:10}}>
-                  {showEntryForm&&viewPerson&&viewPerson.id===p.id&&(
+                  {/* Edit profile name/phone */}
+                  {editPersonObj&&editPersonObj.id===p.id&&(
+                    <div style={{background:C.accentSoft,border:"1.5px solid "+C.accent,borderRadius:10,padding:12,marginBottom:10}}>
+                      <div style={{fontWeight:700,color:C.accent,fontSize:12,marginBottom:8}}>✏️ Edit Profile</div>
+                      <div style={{display:"flex",gap:8,marginBottom:8}}>
+                        <input value={editPersonObj.name} onChange={function(e){setEditPersonObj(Object.assign({},editPersonObj,{name:e.target.value}));}}
+                          placeholder="Naam" style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+                        <input value={editPersonObj.phone||""} onChange={function(e){setEditPersonObj(Object.assign({},editPersonObj,{phone:e.target.value}));}}
+                          placeholder="Phone" style={{flex:1,background:"#fff",border:"1.5px solid "+C.border,borderRadius:7,padding:"7px 9px",fontSize:12,outline:"none"}}/>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={function(){
+                          var updated=people2.map(function(pp){return pp.id===p.id?Object.assign({},pp,{name:editPersonObj.name,phone:editPersonObj.phone}):pp;});
+                          savePeople(updated);
+                          var vp=updated.find(function(pp){return pp.id===p.id;});
+                          if(vp){setViewPerson(vp);}
+                          setEditPersonObj(null);
+                        }} style={{flex:1,background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>💾 Save</button>
+                        <button onClick={function(){setEditPersonObj(null);}} style={{flex:1,background:"#f3f4f6",border:"1px solid "+C.border,color:C.muted,borderRadius:7,padding:"7px 0",cursor:"pointer",fontWeight:700,fontSize:12}}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                  {activeEntryId===p.id&&(
                     <EntryForm
                       entry={editEntry}
                       onSave={function(ef){
                         if(editEntry){updateEntry(p.id,Object.assign({},editEntry,ef));}
                         else{addEntry(p.id,ef);}
-                        setShowEntryForm(false);setEditEntry(null);
+                        setActiveEntryId(null);setEditEntry(null);
                       }}
-                      onCancel={function(){setShowEntryForm(false);setEditEntry(null);}}
+                      onCancel={function(){setActiveEntryId(null);setEditEntry(null);}}
                     />
                   )}
-                  {!showEntryForm&&(
-                    <button onClick={function(){setShowEntryForm(true);setEditEntry(null);}}
+                  {activeEntryId!==p.id&&(
+                    <button onClick={function(){setActiveEntryId(p.id);setEditEntry(null);}}
                       style={{width:"100%",background:C.accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 0",fontWeight:700,cursor:"pointer",fontSize:12,marginBottom:8}}>
                       + Add New Entry
                     </button>
@@ -1991,7 +2013,7 @@ function UdharTab(props){
                         </div>
                         {e.notes&&<div style={{color:C.muted,fontSize:10,marginTop:3}}>💬 {e.notes}</div>}
                         <div style={{display:"flex",gap:4,marginTop:6}}>
-                          <button onClick={function(){setEditEntry(e);setShowEntryForm(true);}}
+                          <button onClick={function(){setEditEntry(e);setActiveEntryId(viewPerson?viewPerson.id:null);}}
                             style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>Edit</button>
                           {e.status!=="Wapas"&&<button onClick={function(){markWapas(p.id,e.id);}}
                             style={{background:C.accentSoft,border:"1px solid "+C.accent,color:C.accent,borderRadius:5,padding:"2px 8px",cursor:"pointer",fontSize:10,fontWeight:700}}>✅ Wapas</button>}
@@ -2809,6 +2831,7 @@ export default function App(){
         {fb:"olympia_groups",    setter:setGroupsR,   lk:"olympia_groups",    getter:function(){return ld("olympia_groups",[]);}},
         {fb:"olympia_udhar",     setter:setUdharR,    lk:"olympia_udhar",     getter:function(){return ld("olympia_udhar",[]);}},
         {fb:"olympia_staffexp",  setter:setStaffExpR, lk:"olympia_staffexp",  getter:function(){return ld("olympia_staffexp",[]);}},
+        {fb:"olympia_users_config",setter:function(d){if(d&&Array.isArray(d.users)&&d.users.length>0){setUsersConfigR(d);sv("olympia_users_config",d);}},lk:"olympia_users_config",getter:function(){return ld("olympia_users_config",null);}},
       ];
 
       keys.forEach(function(kv){
