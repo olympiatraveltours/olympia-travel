@@ -1979,7 +1979,7 @@ function UdharTab(props){
               .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
             if(bal<=0) return null;
             return(
-              <div key={p.id} onClick={function(){setSelPersonId(p.id);setShowForm(false);setShowEditProfile(false);}}
+              <div key={p.id} onClick={function(pid){return function(){setSelPersonId(pid);setShowForm(false);setShowEditProfile(false);};}(p.id)}
                 style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #fecaca",cursor:"pointer"}}>
                 <span style={{fontWeight:700,fontSize:12,color:"#1f2937"}}>{p.name}</span>
                 <div style={{display:"flex",gap:5,alignItems:"center"}}>
@@ -2002,7 +2002,7 @@ function UdharTab(props){
               .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
             if(bal<=0) return null;
             return(
-              <div key={p.id} onClick={function(){setSelPersonId(p.id);setShowForm(false);setShowEditProfile(false);}}
+              <div key={p.id} onClick={function(pid){return function(){setSelPersonId(pid);setShowForm(false);setShowEditProfile(false);};}(p.id)}
                 style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #bbf7d0",cursor:"pointer"}}>
                 <span style={{fontWeight:700,fontSize:12,color:"#1f2937"}}>{p.name}</span>
                 <div style={{display:"flex",gap:5,alignItems:"center"}}>
@@ -2030,12 +2030,12 @@ function UdharTab(props){
             .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
           return(
             <div key={pId}
-              onClick={function(){
-                setSelPersonId(isSel?null:pId);
+              onClick={function(pid){return function(){
+                setSelPersonId(function(prev){return prev===pid?null:pid;});
                 setShowForm(false);
                 setShowEditProfile(false);
                 setEditingEntry(null);
-              }}
+              };}(pId)}
               style={{background:isSel?"#f0fdf4":"#fff",border:"2px solid "+(isSel?"#16a34a":C.border),borderRadius:10,padding:12,cursor:"pointer",transition:"all .15s"}}>
               <div style={{fontWeight:800,fontSize:13,color:"#1f2937",marginBottom:2}}>{person.name}</div>
               {person.phone&&<div style={{color:C.muted,fontSize:10,marginBottom:3}}>📞 {person.phone}</div>}
@@ -2139,17 +2139,17 @@ function UdharTab(props){
                     </div>
                   </div>
                   <div style={{display:"flex",gap:6}}>
-                    <button onClick={function(){setEditingEntry(entry);setShowForm(true);setShowEditProfile(false);}}
+                    <button onClick={function(e){return function(){setEditingEntry(e);setShowForm(true);setShowEditProfile(false);};}(entry)}
                       style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>
                       ✏️ Edit
                     </button>
                     {entry.status!=="Settled"&&(
-                      <button onClick={function(){handleWapas(selPersonId,eId);}}
+                      <button onClick={function(eid){return function(){handleWapas(selPersonId,eid);};}(eId)}
                         style={{background:"#f0fdf4",border:"1px solid #bbf7d0",color:"#16a34a",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>
                         ✅ Settled
                       </button>
                     )}
-                    <button onClick={function(){handleDelEntry(selPersonId,eId);}}
+                    <button onClick={function(eid){return function(){handleDelEntry(selPersonId,eid);};}(eId)}
                       style={{background:"#fee2e2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>
                       🗑 Del
                     </button>
