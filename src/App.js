@@ -1747,10 +1747,12 @@ function UdharTab(props){
   var people=useMemo(function(){
     if(udhar.length===0) return [];
     if(udhar[0]&&Array.isArray(udhar[0].entries)) return udhar;
+    // Migrate old flat format to person-based
     var grouped={};
     udhar.forEach(function(u){
-      var key=(u.name||"").toLowerCase().trim();
-      if(!grouped[key]) grouped[key]={id:"p_"+key,name:u.name,phone:u.phone||"",entries:[]};
+      var nm=(u.name||"unknown").trim();
+      var key=nm.toLowerCase();
+      if(!grouped[key]) grouped[key]={id:"UP"+Math.abs(key.split("").reduce(function(h,c){return(h<<5)-h+c.charCodeAt(0)|0;},0)),name:nm,phone:u.phone||"",entries:[]};
       grouped[key].entries.push({
         id:u.id||uid("UE"),
         date:u.date||"",
@@ -1762,7 +1764,10 @@ function UdharTab(props){
         status:u.status||"Pending"
       });
     });
-    return Object.values(grouped);
+    var migrated=Object.values(grouped);
+    // Auto-save migrated data so it persists
+    setTimeout(function(){props.setUdhar(migrated);},100);
+    return migrated;
   },[udhar]);
 
   // Simple single state - which person is selected
@@ -1907,7 +1912,7 @@ function UdharTab(props){
       {/* Summary boxes */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
         <div style={{background:"#fff5f5",border:"2px solid #fecaca",borderRadius:12,padding:14}}>
-          <div style={{color:C.red,fontWeight:800,fontSize:12,marginBottom:8}}>💸 Milna Hai (Maine Diya)</div>
+          <div style={{color:C.red,fontWeight:800,fontSize:12,marginBottom:8}}>💸 Wapas Lena Hai</div>
           {people.filter(function(p){
             return p.entries.some(function(e){return e.type==="Diya"&&e.status!=="Wapas";});
           }).map(function(p){
@@ -1929,7 +1934,7 @@ function UdharTab(props){
           </div>
         </div>
         <div style={{background:"#f0fdf4",border:"2px solid "+C.border,borderRadius:12,padding:14}}>
-          <div style={{color:C.accent,fontWeight:800,fontSize:12,marginBottom:8}}>💰 Dena Hai (Maine Liya)</div>
+          <div style={{color:C.accent,fontWeight:800,fontSize:12,marginBottom:8}}>💰 Wapas Dena Hai</div>
           {people.filter(function(p){
             return p.entries.some(function(e){return e.type==="Liya"&&e.status!=="Wapas";});
           }).map(function(p){
@@ -1964,8 +1969,8 @@ function UdharTab(props){
               <div style={{fontWeight:800,fontSize:13}}>{p.name}</div>
               {p.phone&&<div style={{color:C.muted,fontSize:11}}>📞 {p.phone}</div>}
               <div style={{fontSize:10,color:C.muted}}>{p.entries.length} entries</div>
-              {pDiya>0&&<div style={{color:C.red,fontWeight:700,fontSize:12,marginTop:3}}>Milna: {pkr(pDiya)}</div>}
-              {pLiya>0&&<div style={{color:C.accent,fontWeight:700,fontSize:12,marginTop:3}}>Dena: {pkr(pLiya)}</div>}
+              {pDiya>0&&<div style={{color:C.red,fontWeight:700,fontSize:12,marginTop:3}}>Wapas Lena: {pkr(pDiya)}</div>}
+              {pLiya>0&&<div style={{color:C.accent,fontWeight:700,fontSize:12,marginTop:3}}>Wapas Dena: {pkr(pLiya)}</div>}
             </div>
           );
         })}
