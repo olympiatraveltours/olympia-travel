@@ -154,7 +154,7 @@ function Stat(props){
 function Modal(props){
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}>
-      <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:16,padding:24,width:props.wide?740:490,maxWidth:"97vw",maxHeight:"93vh",overflowY:"auto",boxShadow:C.shadowMd}}>
+      <div style={{background:C.white,border:"1.5px solid "+C.border,borderRadius:16,padding:24,width:props.wide?1100:490,maxWidth:"98vw",maxHeight:"93vh",overflowY:"auto",boxShadow:C.shadowMd}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <h3 style={{color:C.accent,margin:0,fontSize:15,fontWeight:800}}>{props.title}</h3>
           <button onClick={props.onClose} style={{background:C.accentSoft,border:"none",color:C.accent,fontSize:16,cursor:"pointer",borderRadius:7,width:26,height:26,fontWeight:700}}>x</button>
@@ -1632,11 +1632,11 @@ function EntryForm(efp){
       <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:10}}>
         <button onClick={function(){setEf(Object.assign({},ef,{type:"Diya"}));}}
           style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Diya"?C.red:"transparent",color:ef.type==="Diya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12}}>
-          💸 Given
+          💸 Receivable
         </button>
         <button onClick={function(){setEf(Object.assign({},ef,{type:"Liya"}));}}
           style={{flex:1,padding:"8px 0",border:"none",background:ef.type==="Liya"?C.accent:"transparent",color:ef.type==="Liya"?"#fff":C.muted,fontWeight:800,cursor:"pointer",fontSize:12}}>
-          💰 Taken
+          💰 Payable
         </button>
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
@@ -1705,11 +1705,11 @@ function UdharForm(fp){
       <div style={{display:"flex",marginBottom:10,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
         <button onClick={function(){upd("type","Diya");}}
           style={{flex:1,padding:"10px 0",border:"none",background:f.type==="Diya"?"#dc2626":"#fff",color:f.type==="Diya"?"#fff":"#6b7280",fontWeight:800,cursor:"pointer",fontSize:13}}>
-          💸 Given
+          💸 Receivable
         </button>
         <button onClick={function(){upd("type","Liya");}}
           style={{flex:1,padding:"10px 0",border:"none",background:f.type==="Liya"?"#16a34a":"#fff",color:f.type==="Liya"?"#fff":"#6b7280",fontWeight:800,cursor:"pointer",fontSize:13}}>
-          💰 Taken
+          💰 Payable
         </button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
@@ -1896,7 +1896,7 @@ function UdharTab(props){
       var bal=Number(e.amount||0)-Number(e.paidBack||0);
       return "<tr style='background:"+(i%2===0?"#fff":"#f9fafb")+"'>"
         +"<td style='padding:7px 8px'>"+e.date+"</td>"
-        +"<td style='padding:7px 8px;font-weight:700;color:"+(e.type==="Diya"?"#dc2626":"#16a34a")+"'>"+(e.type==="Diya"?"💸 Given":"💰 Taken")+"</td>"
+        +"<td style='padding:7px 8px;font-weight:700;color:"+(e.type==="Diya"?"#dc2626":"#16a34a")+"'>"+(e.type==="Diya"?"💸 Receivable":"💰 Payable")+"</td>"
         +"<td style='padding:7px 8px;font-weight:700'>"+pkr(Number(e.amount||0))+"</td>"
         +"<td style='padding:7px 8px;color:#16a34a'>"+(Number(e.paidBack||0)>0?pkr(Number(e.paidBack||0)):"--")+"</td>"
         +"<td style='padding:7px 8px;font-weight:700;color:"+(bal>0?"#dc2626":"#16a34a")+"'>"+pkr(bal)+"</td>"
@@ -1964,21 +1964,52 @@ function UdharTab(props){
       {showAddPerson&&(
         <div style={{background:C.accentSoft,border:"2px solid "+C.accent,borderRadius:12,padding:14,marginBottom:14}}>
           <div style={{fontWeight:700,color:C.accent,fontSize:13,marginBottom:8}}>
-            Enter name — if already exists, entry will be added to their profile
+            Enter name — existing person will auto-merge, new name creates new profile
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <input value={newName} onChange={function(e){setNewName(e.target.value);}}
-              onKeyDown={function(e){if(e.key==="Enter")handleAddPerson();}}
-              placeholder="Naam *" autoFocus
-              style={{flex:2,minWidth:150,background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"9px 11px",fontSize:13,outline:"none"}}/>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",position:"relative"}}>
+            <div style={{flex:2,minWidth:150,position:"relative"}}>
+              <input value={newName} onChange={function(e){setNewName(e.target.value);}}
+                onKeyDown={function(e){
+                  if(e.key==="Enter") handleAddPerson();
+                  if(e.key==="Escape") setNewName("");
+                }}
+                placeholder="Type name..." autoFocus
+                style={{width:"100%",background:"#fff",border:"1.5px solid "+C.accent,borderRadius:8,padding:"9px 11px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+              {newName.trim().length>0&&(function(){
+                var matches=persons.filter(function(p){
+                  return p.name.toLowerCase().includes(newName.toLowerCase().trim());
+                });
+                if(matches.length===0) return null;
+                return(
+                  <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid "+C.accent,borderRadius:8,boxShadow:"0 4px 12px rgba(0,0,0,.15)",zIndex:999,marginTop:2}}>
+                    {matches.map(function(p){
+                      var bal=p.entries.filter(function(e){return e.status!=="Settled";})
+                        .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
+                      return(
+                        <div key={p.id} onClick={function(){setNewName(p.name);}}
+                          style={{padding:"10px 12px",cursor:"pointer",borderBottom:"1px solid #f3f4f6",display:"flex",justifyContent:"space-between",alignItems:"center"}}
+                          onMouseEnter={function(e){e.currentTarget.style.background="#f0fdf4";}}
+                          onMouseLeave={function(e){e.currentTarget.style.background="#fff";}}>
+                          <div>
+                            <div style={{fontWeight:700,fontSize:13}}>{p.name}</div>
+                            {p.phone&&<div style={{fontSize:11,color:C.muted}}>{p.phone}</div>}
+                          </div>
+                          <div style={{fontSize:11,color:C.accent,fontWeight:700}}>{p.entries.length} entries</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }())}
+            </div>
             <input value={newPhone} onChange={function(e){setNewPhone(e.target.value);}}
               placeholder="Phone (optional)"
               style={{flex:1,minWidth:120,background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"9px 11px",fontSize:12,outline:"none"}}/>
             <button onClick={handleAddPerson}
               style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
-              → Aage
+              → Go
             </button>
-            <button onClick={function(){setShowAddPerson(false);}}
+            <button onClick={function(){setShowAddPerson(false);setNewName("");}}
               style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#6b7280",borderRadius:8,padding:"9px 12px",fontWeight:700,cursor:"pointer"}}>
               ✕
             </button>
@@ -1990,7 +2021,7 @@ function UdharTab(props){
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
         {/* Wapas Lena */}
         <div style={{background:"#fff5f5",border:"2px solid #fecaca",borderRadius:12,padding:14}}>
-          <div style={{color:"#dc2626",fontWeight:800,fontSize:12,marginBottom:10}}>💸 Given (Receivable)</div>
+          <div style={{color:"#dc2626",fontWeight:800,fontSize:12,marginBottom:10}}>💸 Receivable (Receivable)</div>
           {persons.map(function(p){
             var bal=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Settled";})
               .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
@@ -2013,7 +2044,7 @@ function UdharTab(props){
         </div>
         {/* Wapas Dena */}
         <div style={{background:"#f0fdf4",border:"2px solid #bbf7d0",borderRadius:12,padding:14}}>
-          <div style={{color:"#16a34a",fontWeight:800,fontSize:12,marginBottom:10}}>💰 Taken (Payable)</div>
+          <div style={{color:"#16a34a",fontWeight:800,fontSize:12,marginBottom:10}}>💰 Payable (Payable)</div>
           {persons.map(function(p){
             var bal=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Settled";})
               .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
@@ -2138,7 +2169,7 @@ function UdharTab(props){
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                     <div>
                       <span style={{background:isDiya?"#fee2e2":"#dcfce7",color:isDiya?"#dc2626":"#16a34a",padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,marginRight:6}}>
-                        {isDiya?"💸 Given":"💰 Taken"}
+                        {isDiya?"💸 Receivable":"💰 Payable"}
                       </span>
                       <span style={{background:entry.status==="Settled"?"#dcfce7":entry.status==="Partial"?"#fef9c3":"#fee2e2",color:entry.status==="Settled"?"#16a34a":entry.status==="Partial"?"#a16207":"#dc2626",padding:"3px 8px",borderRadius:20,fontSize:9,fontWeight:700}}>
                         {entry.status}
@@ -2514,8 +2545,8 @@ function GroupsTab(props){
               <tbody>
                 {members.map(function(m,i){return(
                   <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#f0fdf4"}}>
-                    <td style={{padding:"6px 8px",color:C.muted}}>{i+1}</td>
-                    <td style={{padding:"6px 8px",fontWeight:700}}>{m.firstName||m.name}</td>
+                    <td style={{padding:"8px 10px",color:C.muted,whiteSpace:"nowrap"}}>{i+1}</td>
+                    <td style={{padding:"8px 10px",fontWeight:700,whiteSpace:"nowrap"}}>{m.firstName||m.name}</td>
                     <td style={{padding:"6px 8px",color:C.muted}}>{m.surname||"--"}</td>
                     <td style={{padding:"6px 8px",fontSize:10}}>{m.phone||"--"}</td>
                     <td style={{padding:"6px 8px",fontFamily:"monospace",fontSize:10}}>{m.passport||"--"}</td>
@@ -2691,8 +2722,8 @@ function GroupsTab(props){
               <tbody>
                 {(Array.isArray(viewG.members)?viewG.members:[]).map(function(m,i){return(
                   <tr key={i} style={{borderTop:"1px solid "+C.border,background:i%2===0?"#fff":"#f0fdf4"}}>
-                    <td style={{padding:"6px 8px",color:C.muted}}>{i+1}</td>
-                    <td style={{padding:"6px 8px",fontWeight:700}}>{m.firstName||m.name}</td>
+                    <td style={{padding:"8px 10px",color:C.muted,whiteSpace:"nowrap"}}>{i+1}</td>
+                    <td style={{padding:"8px 10px",fontWeight:700,whiteSpace:"nowrap"}}>{m.firstName||m.name}</td>
                     <td style={{padding:"6px 8px",color:C.muted}}>{m.surname||"--"}</td>
                     <td style={{padding:"6px 8px"}}>{m.phone||"--"}</td>
                     <td style={{padding:"6px 8px",fontFamily:"monospace"}}>{m.passport||"--"}</td>
