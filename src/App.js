@@ -1393,24 +1393,24 @@ function VisaAgentTab(props){
           return(
             <div key={country} onClick={function(){setSelCountry(isSel?null:country);}}
               style={{background:isSel?"#f0fdf4":"#fff",border:"2px solid "+(isSel?"#16a34a":C.border),borderRadius:10,padding:12,cursor:"pointer",textAlign:"center",transition:"all .15s"}}>
-              <div style={{fontSize:28,marginBottom:4}}>{VISA_DB[selCountry].flag}</div>
+              <div style={{fontSize:28,marginBottom:4}}>{(VISA_DB[country]||{}).flag||"🌍"}</div>
               <div style={{fontWeight:800,fontSize:13,color:"#1f2937",marginBottom:2}}>{country}</div>
-              <div style={{fontSize:10,color:"#16a34a",fontWeight:700}}>{VISA_DB[selCountry].fees}</div>
-              <div style={{fontSize:9,color:C.muted,marginTop:2}}>{VISA_DB[selCountry].processing}</div>
+              <div style={{fontSize:10,color:"#16a34a",fontWeight:700}}>{(VISA_DB[country]||{}).fees||""}</div>
+              <div style={{fontSize:9,color:C.muted,marginTop:2}}>{(VISA_DB[country]||{}).processing||""}</div>
             </div>
           );
         })}
       </div>
 
       {/* Selected Country Detail */}
-      {selCountry&&VISA_DB[selCountry]&&(
+      {selInfo&&(
           <div style={{background:"#fff",border:"2px solid #16a34a",borderRadius:14,padding:20,boxShadow:"0 4px 20px rgba(0,0,0,.08)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16,flexWrap:"wrap",gap:10}}>
               <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <span style={{fontSize:40}}>{VISA_DB[selCountry].flag}</span>
+                <span style={{fontSize:40}}>{selInfo.flag}</span>
                 <div>
                   <div style={{fontWeight:900,fontSize:20,color:"#1f2937"}}>{selCountry}</div>
-                  <div style={{color:C.muted,fontSize:12}}>{VISA_DB[selCountry].type}</div>
+                  <div style={{color:C.muted,fontSize:12}}>{selInfo.type}</div>
                 </div>
               </div>
               <div style={{display:"flex",gap:8}}>
@@ -1425,7 +1425,7 @@ function VisaAgentTab(props){
 
             {/* Info Cards */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
-              {[["💰 Agency Fee",VISA_DB[selCountry].fees],["⏱️ Processing",VISA_DB[selCountry].processing],["📅 Validity",VISA_DB[selCountry].validity]].map(function(c){return(
+              {[["💰 Agency Fee",si.fees],["⏱️ Processing",si.processing],["📅 Validity",si.validity]].map(function(c){return(
                 <div key={c[0]} style={{background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,padding:"12px",textAlign:"center"}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#16a34a",textTransform:"uppercase",marginBottom:4}}>{c[0]}</div>
                   <div style={{fontSize:13,fontWeight:800,color:"#1f2937"}}>{c[1]}</div>
@@ -1437,7 +1437,7 @@ function VisaAgentTab(props){
               <div>
                 <div style={{fontWeight:800,color:"#16a34a",fontSize:12,textTransform:"uppercase",marginBottom:8,paddingBottom:6,borderBottom:"2px solid #bbf7d0"}}>📋 Required Documents</div>
                 <ul style={{paddingLeft:16,margin:0}}>
-                  {VISA_DB[selCountry].requirements.map(function(r,i){return(
+                  {selInfo.requirements.map(function(r,i){return(
                     <li key={i} style={{fontSize:12,color:"#374151",marginBottom:5,lineHeight:1.5}}>{r}</li>
                   );})}
                 </ul>
@@ -1445,7 +1445,7 @@ function VisaAgentTab(props){
               <div>
                 <div style={{fontWeight:800,color:"#16a34a",fontSize:12,textTransform:"uppercase",marginBottom:8,paddingBottom:6,borderBottom:"2px solid #bbf7d0"}}>ℹ️ Important Notes</div>
                 <div style={{background:"#fefce8",border:"1.5px solid #fde68a",borderRadius:8,padding:12,fontSize:12,color:"#92400e",lineHeight:1.6}}>
-                  {VISA_DB[selCountry].notes}
+                  {selInfo.notes}
                 </div>
               </div>
             </div>
