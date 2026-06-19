@@ -1600,10 +1600,17 @@ function VisaAgentTab(props){
                 </div>
               </div>
               <div style={{marginBottom:10}}>
-                <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,fontWeight:700,color:C.accent}}>
-                  <input type="checkbox" checked={form.onArrival} onChange={function(e){setForm(Object.assign({},form,{onArrival:e.target.checked}));}} style={{width:16,height:16}}/>
-                  Free / On Arrival (Pakistan Passport)
-                </label>
+                <div style={{fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:6}}>Visa Status for Pakistan Passport</div>
+                <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+                  <button onClick={function(){setForm(Object.assign({},form,{onArrival:false}));}}
+                    style={{flex:1,padding:"9px 0",border:"none",background:!form.onArrival?"#dc2626":"#fff",color:!form.onArrival?"#fff":"#6b7280",fontWeight:700,cursor:"pointer",fontSize:12}}>
+                    📋 Visa Required
+                  </button>
+                  <button onClick={function(){setForm(Object.assign({},form,{onArrival:true}));}}
+                    style={{flex:1,padding:"9px 0",border:"none",background:form.onArrival?"#16a34a":"#fff",color:form.onArrival?"#fff":"#6b7280",fontWeight:700,cursor:"pointer",fontSize:12}}>
+                    ✅ Free / On Arrival
+                  </button>
+                </div>
               </div>
               <div style={{marginBottom:10}}>
                 <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Requirements (ek line mein ek requirement)</label>
