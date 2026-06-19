@@ -1425,7 +1425,7 @@ function VisaAgentTab(props){
 
             {/* Info Cards */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
-              {[["💰 Agency Fee",si.fees],["⏱️ Processing",si.processing],["📅 Validity",si.validity]].map(function(c){return(
+              {[["💰 Agency Fee",selInfo.fees],["⏱️ Processing",selInfo.processing],["📅 Validity",selInfo.validity]].map(function(c){return(
                 <div key={c[0]} style={{background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,padding:"12px",textAlign:"center"}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#16a34a",textTransform:"uppercase",marginBottom:4}}>{c[0]}</div>
                   <div style={{fontSize:13,fontWeight:800,color:"#1f2937"}}>{c[1]}</div>
