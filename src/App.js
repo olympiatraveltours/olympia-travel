@@ -1282,6 +1282,309 @@ function ExpenseAdder(props){
 
 
 
+
+// ─── VISA AGENT TAB ──────────────────────────────────────────
+function VisaAgentTab(props){
+  var LOGO=LOGO_URI;
+
+  // ── VISA DATABASE ──────────────────────────────────────────
+  var VISAS=[
+    {country:"United Arab Emirates",flag:"🇦🇪",currency:"AED",
+     types:[
+       {name:"Tourist Visa (30 days)",fee:"PKR 25,000–35,000",processing:"3–5 working days",validity:"60 days",docs:["Original Passport (6+ months validity)","Passport size photos (white background)","Bank statement (last 3 months, min PKR 5 lac)","Confirmed hotel booking","Return flight ticket","Travel insurance"]},
+       {name:"Tourist Visa (60 days)",fee:"PKR 40,000–50,000",processing:"3–5 working days",validity:"90 days",docs:["Original Passport","Photos","Bank statement (min PKR 8 lac)","Hotel booking","Return ticket","Travel insurance"]},
+     ],notes:"On arrival not available for Pakistani passport. Apply through authorized agent."},
+    {country:"United Kingdom",flag:"🇬🇧",currency:"GBP",
+     types:[
+       {name:"Standard Visitor Visa",fee:"PKR 55,000–65,000",processing:"15–21 working days",validity:"6 months / 2 years / 5 years",docs:["Original Passport","Biometric (VFS appointment)","Bank statement (6 months, min PKR 20 lac)","Employment letter / Business proof","Property documents","Travel itinerary","Hotel booking","Invitation letter (if applicable)","Travel insurance"]},
+     ],notes:"Priority service available. Interview may be required."},
+    {country:"Schengen (Europe)",flag:"🇪🇺",currency:"EUR",
+     types:[
+       {name:"Tourist Visa (Short Stay)",fee:"PKR 35,000–45,000",processing:"15 working days",validity:"90 days / 180 days",docs:["Original Passport (3+ months beyond travel)","2 photos (35x45mm, white background)","Bank statement (3 months, min PKR 15 lac)","Flight itinerary","Hotel bookings","Travel insurance (min €30,000 coverage)","Employment/NOC letter","Pay slips (3 months)","Income tax returns"]},
+     ],notes:"Apply at embassy of first entry country. Processing starts 6 months before travel."},
+    {country:"Malaysia",flag:"🇲🇾",currency:"MYR",
+     types:[
+       {name:"eVisa / Sticker Visa",fee:"PKR 12,000–18,000",processing:"3–5 working days",validity:"30 days",docs:["Passport scan (first & last page)","Passport size photo","Bank statement (min PKR 3 lac)","Hotel booking","Return ticket","Travel insurance"]},
+     ],notes:"Malaysian visa relatively easier. Good approval rate for Pakistani nationals."},
+    {country:"Turkey",flag:"🇹🇷",currency:"TRY",
+     types:[
+       {name:"Tourist eVisa",fee:"USD 100 (~PKR 28,000)",processing:"Instant – 24 hours",validity:"90 days",docs:["Valid passport","Credit/debit card for payment","Email address"]},
+     ],notes:"Apply online at evisa.gov.tr. Very easy process for Pakistani passport holders."},
+    {country:"Thailand",flag:"🇹🇭",currency:"THB",
+     types:[
+       {name:"Tourist Visa (TR)",fee:"PKR 15,000–20,000",processing:"5–7 working days",validity:"60 days",docs:["Original Passport","2 photos","Bank statement (min PKR 5 lac)","Hotel booking","Return ticket","Travel itinerary"]},
+     ],notes:"Apply at Thai Embassy Islamabad or Consulate Karachi."},
+    {country:"Saudi Arabia",flag:"🇸🇦",currency:"SAR",
+     types:[
+       {name:"Tourist eVisa",fee:"SAR 300 (~PKR 25,000)",processing:"Instant online",validity:"90 days (multiple entry 1 year)",docs:["Valid passport (6+ months)","Photo","Online application at visitsaudi.com","Credit card for payment"]},
+       {name:"Umrah Visa",fee:"Free",processing:"7–14 days via agent",validity:"30 days",docs:["Original Passport","Passport photos","Vaccination proof (Meningitis, COVID)","Mahram proof (for women)","Booking from approved operator"]},
+     ],notes:"Tourist eVisa easy online. Umrah through authorized Hajj/Umrah operator only."},
+    {country:"Azerbaijan",flag:"🇦🇿",currency:"AZN",
+     types:[
+       {name:"eVisa (ASAN Visa)",fee:"USD 26 (~PKR 7,000)",processing:"3 working days",validation:"30 days",docs:["Passport scan","Photo","Online at evisa.gov.az","Credit card"]},
+     ],notes:"Very easy visa for Pakistanis. Popular destination from Karachi."},
+    {country:"Oman",flag:"🇴🇲",currency:"OMR",
+     types:[
+       {name:"Tourist eVisa",fee:"OMR 20 (~PKR 17,000)",processing:"Instant – 48 hours",validity:"30 days",docs:["Passport scan","Photo","Apply at evisa.rop.gov.om","Credit card"]},
+     ],notes:"eVisa process is smooth. Good approval rate for Pakistanis."},
+    {country:"China",flag:"🇨🇳",currency:"CNY",
+     types:[
+       {name:"Tourist Visa (L)",fee:"PKR 20,000–30,000",processing:"4–7 working days",validity:"30–90 days",docs:["Original Passport","Photos","Bank statement (PKR 5 lac+)","Hotel booking","Return ticket","Invitation letter if applicable","Travel itinerary"]},
+     ],notes:"Apply at Chinese Consulate Karachi. Group tours easier approval."},
+    {country:"Georgia",flag:"🇬🇪",currency:"GEL",
+     types:[
+       {name:"Visa Free / eVisa",fee:"Free / USD 20",processing:"Instant",validity:"365 days (visa free 1 year)",docs:["Valid Passport"]},
+     ],notes:"Pakistan gets 1 YEAR visa-free access to Georgia! Very popular destination."},
+    {country:"Indonesia",flag:"🇮🇩",currency:"IDR",
+     types:[
+       {name:"Visa on Arrival (Bali)",fee:"USD 35 (~PKR 10,000)",processing:"On arrival at airport",validity:"30 days",docs:["Valid Passport","Return ticket","Hotel booking","Sufficient funds"]},
+       {name:"eVisa",fee:"USD 35",processing:"3–5 days",validity:"60 days",docs:["Passport scan","Photo","Bank statement","Hotel booking","Return ticket"]},
+     ],notes:"Bali visa on arrival available. Very tourist-friendly for Pakistanis."},
+    {country:"Cambodia",flag:"🇰🇭",currency:"KHR",
+     types:[
+       {name:"eVisa",fee:"USD 36 (~PKR 10,000)",processing:"3 working days",validity:"30 days",docs:["Passport scan","Photo","Credit card","evisa.gov.kh"]},
+     ],notes:"Easy online process. Good for budget travelers visiting Angkor Wat."},
+    {country:"Sri Lanka",flag:"🇱🇰",currency:"LKR",
+     types:[
+       {name:"ETA (Electronic Travel Authorization)",fee:"USD 20 (~PKR 5,500)",processing:"Instant – 24 hours",validity:"30 days",docs:["Passport details","Email","Credit card","eta.gov.lk"]},
+     ],notes:"Very easy ETA process online. Pakistani nationals generally get approval."},
+  ];
+
+  var [selCountry,setSelCountry]=useState(null);
+  var [search,setSearch]=useState("");
+  var [activeTab,setActiveTab]=useState("countries");
+
+  var filtered=VISAS.filter(function(v){
+    return !search||v.country.toLowerCase().includes(search.toLowerCase());
+  });
+
+  function generatePDF(v){
+    var typesHTML=v.types.map(function(t){
+      var docsHTML=t.docs.map(function(d){return "<li style='margin:3px 0'>"+d+"</li>";}).join("");
+      return "<div style='background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:14px'>"
+        +"<div style='font-size:15px;font-weight:700;color:#1f2937;margin-bottom:10px'>"+t.name+"</div>"
+        +"<table style='width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px'>"
+        +"<tr><td style='padding:5px 8px;background:#f0fdf4;font-weight:700;width:35%;border:1px solid #e5e7eb'>Visa Fee</td><td style='padding:5px 8px;border:1px solid #e5e7eb'>"+t.fee+"</td></tr>"
+        +"<tr><td style='padding:5px 8px;background:#f0fdf4;font-weight:700;border:1px solid #e5e7eb'>Processing Time</td><td style='padding:5px 8px;border:1px solid #e5e7eb'>"+t.processing+"</td></tr>"
+        +"<tr><td style='padding:5px 8px;background:#f0fdf4;font-weight:700;border:1px solid #e5e7eb'>Validity</td><td style='padding:5px 8px;border:1px solid #e5e7eb'>"+(t.validity||t.validation||"")+"</td></tr>"
+        +"</table>"
+        +"<div style='font-size:12px;font-weight:700;margin-bottom:6px;color:#374151'>Required Documents:</div>"
+        +"<ul style='margin:0;padding-left:18px;font-size:12px;color:#374151'>"+docsHTML+"</ul>"
+        +"</div>";
+    }).join("");
+
+    var html="<!DOCTYPE html><html><head><title>"+v.country+" Visa Guide</title>"
+      +"<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:0;background:#fff;color:#1f2937}"
+      +"@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
+      // Header with logo watermark background
+      +"<div style='position:relative;background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);padding:24px 28px;border-bottom:3px solid #16a34a;overflow:hidden'>"
+      +"<div style='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.06;z-index:0'>"
+      +"<img src='"+LOGO+"' style='width:300px;height:auto'/>"
+      +"</div>"
+      +"<div style='position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center'>"
+      +"<div>"
+      +"<img src='"+LOGO+"' style='height:55px;margin-bottom:6px'/>"
+      +"<div style='font-size:11px;color:#374151'>Office No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi</div>"
+      +"<div style='font-size:11px;color:#374151'>📞 +92-331-2351419 | ✉️ olympiatraveltours@gmail.com</div>"
+      +"</div>"
+      +"<div style='text-align:right'>"
+      +"<div style='font-size:36px'>"+v.flag+"</div>"
+      +"<div style='font-size:20px;font-weight:900;color:#16a34a'>"+v.country+"</div>"
+      +"<div style='font-size:11px;color:#6b7280'>Visa Requirements Guide</div>"
+      +"</div>"
+      +"</div></div>"
+      // Content with watermark
+      +"<div style='position:relative;padding:24px 28px'>"
+      +"<div style='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);opacity:0.04;z-index:0;pointer-events:none'>"
+      +"<img src='"+LOGO+"' style='width:500px'/>"
+      +"</div>"
+      +"<div style='position:relative;z-index:1'>"
+      +(v.notes?"<div style='background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px'>ℹ️ <b>Note:</b> "+v.notes+"</div>":"")
+      +typesHTML
+      +"<div style='margin-top:20px;padding-top:14px;border-top:1px dashed #e5e7eb;font-size:10px;color:#9ca3af;text-align:center'>"
+      +"Olympia Travel & Tours | GL No. 6033 | This guide is for reference only. Visa requirements may change. Please confirm before applying."
+      +"<br>Generated: "+new Date().toLocaleDateString("en-PK")+"</div>"
+      +"</div></div></body></html>";
+
+    var w=window.open("","_blank");
+    w.document.write(html);
+    w.document.close();
+    setTimeout(function(){w.print();},500);
+  }
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div>
+          <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>🌍 Visa Guide & AI Agent</h2>
+          <div style={{color:C.muted,fontSize:11,marginTop:2}}>Country-wise requirements + AI Assistant</div>
+        </div>
+      </div>
+
+      {/* Tab switcher */}
+      <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:10,overflow:"hidden",marginBottom:14,width:"fit-content"}}>
+        {[["countries","🌍 Visa Requirements"],["chat","🤖 AI Chat Assistant"]].map(function(t){return(
+          <button key={t[0]} onClick={function(){setActiveTab(t[0]);}}
+            style={{padding:"9px 20px",border:"none",background:activeTab===t[0]?C.accent:"#fff",color:activeTab===t[0]?"#fff":C.muted,fontWeight:700,cursor:"pointer",fontSize:12}}>
+            {t[1]}
+          </button>
+        );})}
+      </div>
+
+      {/* Countries tab */}
+      {activeTab==="countries"&&(
+        <div>
+          <input value={search} onChange={function(e){setSearch(e.target.value);setSelCountry(null);}}
+            placeholder="🔍 Search country..."
+            style={{width:"100%",background:"#fff",border:"1.5px solid "+C.border,borderRadius:10,padding:"10px 14px",fontSize:13,outline:"none",marginBottom:14,boxSizing:"border-box"}}/>
+
+          {/* Country grid */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:8,marginBottom:14}}>
+            {filtered.map(function(v){
+              var isSel=selCountry&&selCountry.country===v.country;
+              return(
+                <div key={v.country}
+                  onClick={function(){setSelCountry(isSel?null:v);}}
+                  style={{background:isSel?"#f0fdf4":"#fff",border:"2px solid "+(isSel?"#16a34a":C.border),borderRadius:10,padding:"12px",cursor:"pointer",textAlign:"center",transition:"all .15s"}}>
+                  <div style={{fontSize:28,marginBottom:4}}>{v.flag}</div>
+                  <div style={{fontWeight:700,fontSize:12,color:"#1f2937"}}>{v.country}</div>
+                  <div style={{fontSize:10,color:C.muted,marginTop:2}}>{v.types.length} visa type{v.types.length>1?"s":""}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Selected country detail */}
+          {selCountry&&(
+            <div style={{background:"#fff",border:"2px solid #16a34a",borderRadius:14,padding:20}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{fontSize:40}}>{selCountry.flag}</span>
+                  <div>
+                    <div style={{fontWeight:900,fontSize:20,color:"#1f2937"}}>{selCountry.country}</div>
+                    <div style={{fontSize:12,color:C.muted}}>Currency: {selCountry.currency}</div>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={function(){generatePDF(selCountry);}}
+                    style={{background:"#16a34a",color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontWeight:800,cursor:"pointer",fontSize:12}}>
+                    📄 Download PDF
+                  </button>
+                  <button onClick={function(){setSelCountry(null);}}
+                    style={{background:"#fee2e2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:8,padding:"9px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {selCountry.notes&&(
+                <div style={{background:"#fef9c3",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12}}>
+                  ℹ️ <b>Note:</b> {selCountry.notes}
+                </div>
+              )}
+
+              {selCountry.types.map(function(t,i){return(
+                <div key={i} style={{background:"#f9fafb",border:"1px solid "+C.border,borderRadius:10,padding:16,marginBottom:10}}>
+                  <div style={{fontWeight:800,fontSize:14,color:"#1f2937",marginBottom:10}}>{t.name}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:8,marginBottom:12}}>
+                    {[["💰 Fee",t.fee],["⏱ Processing",t.processing],["📅 Validity",t.validity||t.validation||""]].map(function(d){return(
+                      <div key={d[0]} style={{background:"#fff",border:"1px solid "+C.border,borderRadius:8,padding:"10px 12px"}}>
+                        <div style={{fontSize:10,fontWeight:700,color:C.muted,marginBottom:3}}>{d[0]}</div>
+                        <div style={{fontWeight:800,fontSize:13,color:"#1f2937"}}>{d[1]}</div>
+                      </div>
+                    );})}
+                  </div>
+                  <div style={{fontWeight:700,fontSize:12,color:"#374151",marginBottom:8}}>📋 Required Documents:</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {t.docs.map(function(d,di){return(
+                      <span key={di} style={{background:C.accentSoft,color:C.accent,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:600}}>
+                        ✓ {d}
+                      </span>
+                    );})}
+                  </div>
+                </div>
+              );})}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AI Chat tab - FREE using built-in knowledge */}
+      {activeTab==="chat"&&(function(){
+        var [msgs,setMsgs]=useState([{role:"assistant",content:"Assalam o Alaikum! 👋 Main Olympia Travel ka Visa Guide hoon. Kisi bhi country ka visa info chahiye? Country ka naam likhein aur main bataunga! 🌍\n\nAvailable: UAE, UK, Schengen, Malaysia, Turkey, Thailand, Saudi Arabia, Azerbaijan, Oman, China, Georgia, Indonesia, Cambodia, Sri Lanka"}]);
+        var [inp,setInp]=useState("");
+
+        function handleSend(){
+          if(!inp.trim()) return;
+          var q=inp.toLowerCase();
+          var reply="Sorry, is country ke baare mein mere paas abhi info nahi hai. Please call karein: 03312351419";
+
+          // Match country
+          var match=VISAS.find(function(v){return q.includes(v.country.toLowerCase())||v.country.toLowerCase().split(" ").some(function(w){return w.length>3&&q.includes(w.toLowerCase());});});
+
+          if(match){
+            var t=match.types[0];
+            reply=match.flag+" "+match.country+" Visa Info:\n\n";
+            match.types.forEach(function(tp){
+              reply+="📋 "+tp.name+"\n";
+              reply+="💰 Fee: "+tp.fee+"\n";
+              reply+="⏱ Processing: "+tp.processing+"\n";
+              reply+="📅 Validity: "+(tp.validity||tp.validation||"")+"\n";
+              reply+="\nDocuments needed:\n";
+              tp.docs.forEach(function(d){reply+="• "+d+"\n";});
+              reply+="\n";
+            });
+            if(match.notes) reply+="ℹ️ Note: "+match.notes;
+          } else if(q.includes("fee")||q.includes("cost")||q.includes("price")){
+            reply="Please specify which country? For example: 'UAE visa fee' ya 'UK visa cost'";
+          } else if(q.includes("hello")||q.includes("hi")||q.includes("salam")||q.includes("assalam")){
+            reply="Wa Alaikum Assalam! 😊 Kaunse country ka visa chahiye? UAE, UK, Schengen, Malaysia, Turkey, Saudi Arabia, Georgia — kisi ke baare mein bhi poochein!";
+          } else {
+            reply="Mujhe country ka naam chahiye! Example: 'UAE visa', 'UK requirements', 'Malaysia kaise milega'\n\nAvailable countries: UAE, UK, Schengen, Malaysia, Turkey, Thailand, Saudi Arabia, Azerbaijan, Oman, China, Georgia, Indonesia, Cambodia, Sri Lanka";
+          }
+
+          var newMsgs=msgs.concat([{role:"user",content:inp},{role:"assistant",content:reply}]);
+          setMsgs(newMsgs);
+          setInp("");
+        }
+
+        return(
+          <div style={{background:"#fff",border:"1.5px solid "+C.border,borderRadius:14,overflow:"hidden"}}>
+            <div style={{height:380,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:10}}>
+              {msgs.map(function(m,i){return(
+                <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+                  <div style={{maxWidth:"80%",background:m.role==="user"?C.accent:"#f3f4f6",color:m.role==="user"?"#fff":"#1f2937",padding:"10px 14px",borderRadius:m.role==="user"?"14px 14px 4px 14px":"14px 14px 14px 4px",fontSize:12,lineHeight:1.6,whiteSpace:"pre-wrap"}}>
+                    {m.content}
+                  </div>
+                </div>
+              );})}
+            </div>
+            <div style={{borderTop:"1.5px solid "+C.border,padding:12,display:"flex",gap:8}}>
+              <input value={inp} onChange={function(e){setInp(e.target.value);}}
+                onKeyDown={function(e){if(e.key==="Enter")handleSend();}}
+                placeholder="Country ka naam likhein... e.g. UAE visa"
+                style={{flex:1,background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:9,padding:"9px 13px",fontSize:12,outline:"none"}}/>
+              <button onClick={handleSend}
+                style={{background:C.accent,color:"#fff",border:"none",borderRadius:9,padding:"9px 16px",fontWeight:800,cursor:"pointer",fontSize:12}}>
+                Send
+              </button>
+            </div>
+            <div style={{padding:"8px 12px",borderTop:"1px solid "+C.border,display:"flex",gap:6,flexWrap:"wrap"}}>
+              {["UAE","UK","Malaysia","Turkey","Saudi Arabia","Georgia"].map(function(c){return(
+                <button key={c} onClick={function(){setInp(c+" visa");}}
+                  style={{background:C.accentSoft,border:"1px solid "+C.border,color:C.accent,borderRadius:20,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+                  {c}
+                </button>
+              );})}
+            </div>
+          </div>
+        );
+      }())}
+    </div>
+  );
+}
+
+
 // ─── USER EDITOR COMPONENT ─────────────────────────────────
 function UserEditor(ep){
   var u=ep.user;
@@ -1932,7 +2235,7 @@ function UdharTab(props){
       +"<div class='net' style='background:"+(net>0?"#fee2e2":net<0?"#dcfce7":"#f3f4f6")+";border:1.5px solid "+(net>0?"#fecaca":net<0?"#bbf7d0":"#e5e7eb")+"'>"
       +"<div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(net>0?"Total Receivable":net<0?"Total Payable":"Clear!")+"</div>"
       +"<div style='font-size:24px;font-weight:900;color:"+(net>0?"#dc2626":net<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(net))+"</div></div>"
-      +"<div class='pay'>💳 <b>03312351419</b> — SadaPay / NayaPay / JazzCash / EasyPaisa</div>"
+      +"<div class='pay'>💳 <b>Payment Details:</b><br>JazzCash / EasyPaisa / SadaPay / NayaPay: <b>03312351419</b> (Dawood Shoukat)<br>Bank Alfalah — A/C: 55875002428885 | IBAN: PK84ALFH5587005002428885 (M/S Olympia Travel & Tours)</div>"
       +"<div class='foot'>Olympia Travel & Tours | Printed: "+new Date().toLocaleString("en-PK")+"</div>"
       +"</body></html>");
     w.document.close();
@@ -3011,7 +3314,7 @@ export default function App(){
     fbSave("olympia_users_config",cfg);
   }
   var USERS=Array.isArray(usersConfig&&usersConfig.users)?usersConfig.users:DEFAULT_USERS.users;
-  var ADMIN_TABS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries","access"];
+  var ADMIN_TABS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries","visaagent","access"];
   var STAFF_TABS=["bookings","queries","groups","staffexp"];
   function getAccessTabs(role,userId){
     if(role==="admin") return ADMIN_TABS;
@@ -3217,7 +3520,7 @@ export default function App(){
     {id:"groups",l:"Groups"},{id:"udhar",l:"Udhar 💰"},
     {id:"staffexp",l:"Staff Expenses"},{id:"personal",l:"My Expenses"},
     {id:"marketing",l:"Marketing"},{id:"queries",l:"Queries"},
-    {id:"access",l:"⚙️ Access Control"},
+    {id:"visaagent",l:"🤖 Visa Agent"},{id:"access",l:"⚙️ Access Control"},
   ];
   var accessTabs=currentUser?getAccessTabs(currentUser.role,currentUser.id):[];
   var TABS=ALL_TABS.filter(function(t){return accessTabs.includes(t.id);});
@@ -3755,6 +4058,7 @@ export default function App(){
         )}
                 {tab==="marketing"&&<Marketing packages={packages} setPackages={setP} customers={customers} showToast={showToast}/>}
         {tab==="queries"&&<QueriesTab queries={queries} setQueries={setQueries} currentUser={currentUser}/>}
+        {tab==="visaagent"&&<VisaAgentTab currentUser={currentUser}/> }
         {tab==="access"&&<AccessControlTab usersConfig={usersConfig} saveUsersConfig={saveUsersConfig} sectionLabels={SECTION_LABELS} allSections={ALL_SECTION_IDS}/>}
         {tab==="groups"&&<GroupsTab groups={groups} setGroups={setGroups} customers={customers}/>}
         {tab==="udhar"&&<UdharTab udhar={udhar} setUdhar={setUdhar}/>}
