@@ -1768,8 +1768,25 @@ function UdharTab(props){
 
   // STATE - simple and clear
   var [persons,setPersons]=useState(function(){
-    // Load from udhar - new format: array of person objects with entries
-    if(udhar.length>0&&Array.isArray(udhar[0].entries)) return udhar;
+    if(udhar.length>0&&Array.isArray(udhar[0].entries)){
+      // Fix duplicate IDs - give each person unique ID
+      var seen={};
+      var fixed=udhar.map(function(p,i){
+        var id=p.id||("UP"+i);
+        if(seen[id]){id="UP"+Date.now()+"_"+i;}
+        seen[id]=true;
+        return Object.assign({},p,{id:id});
+      });
+      // Check if any were fixed
+      var needsFix=fixed.some(function(p,i){return p.id!==udhar[i].id;});
+      if(needsFix){
+        // Save fixed data after render
+        setTimeout(function(){
+          setUdhar(fixed);
+        },500);
+      }
+      return fixed;
+    }
     return [];
   });
   var [selPersonId,setSelPersonId]=useState(null);
