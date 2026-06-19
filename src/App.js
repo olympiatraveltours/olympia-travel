@@ -1516,6 +1516,27 @@ function VisaAgentTab(props){
                   <div style={{background:"#fefce8",border:"1.5px solid #fde68a",borderRadius:8,padding:10,fontSize:12,color:"#92400e",lineHeight:1.6}}>{selCountry.notes}</div>
                 </div>
               </div>
+              {/* Visa Types */}
+              {Array.isArray(selCountry.visaTypes)&&selCountry.visaTypes.length>0&&(
+                <div style={{marginTop:14}}>
+                  <div style={{fontWeight:800,color:"#16a34a",fontSize:11,textTransform:"uppercase",marginBottom:10,borderBottom:"2px solid #bbf7d0",paddingBottom:5}}>
+                    🎫 {selCountry.name==="Schengen (Europe)"?"Schengen Countries — Select Embassy":"Available Visa Types"}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+                    {selCountry.visaTypes.map(function(vt,i){return(
+                      <div key={i} style={{background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,padding:12}}>
+                        <div style={{fontWeight:800,fontSize:13,color:"#1f2937",marginBottom:6}}>{vt.name}</div>
+                        <div style={{display:"flex",gap:8,marginBottom:5,flexWrap:"wrap"}}>
+                          <span style={{background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>PKR {Number(vt.fees||0).toLocaleString()}</span>
+                          <span style={{background:"#eff6ff",color:"#1d4ed8",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{vt.processing}</span>
+                          <span style={{background:"#fef9c3",color:"#a16207",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{vt.validity}</span>
+                        </div>
+                        <div style={{fontSize:11,color:"#6b7280",lineHeight:1.5}}>{vt.notes}</div>
+                      </div>
+                    );})}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
