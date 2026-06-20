@@ -1374,7 +1374,23 @@ function VisaAgentTab(props){
   var [customCountries,setCustomCountries]=useState(function(){
     try{var s=localStorage.getItem("olympia_custom_visa");return s?JSON.parse(s):[];}catch(e){return [];}
   });
-  var allCountries=VISA_DATA.concat(customCountries);
+  // Custom countries override default ones with same id
+  var allCountries=VISA_DATA.map(function(c){
+    var override=customCountries.find(function(cc){return cc.id===c.id;});
+    if(override) return override;
+    // Also check children
+    if(c.children){
+      var newChildren=c.children.map(function(ch){
+        var childOverride=customCountries.find(function(cc){return cc.id===ch.id;});
+        return childOverride||ch;
+      });
+      return Object.assign({},c,{children:newChildren});
+    }
+    return c;
+  }).concat(customCountries.filter(function(cc){
+    return !VISA_DATA.find(function(d){return d.id===cc.id;})&&
+           !VISA_DATA.some(function(d){return d.children&&d.children.find(function(ch){return ch.id===cc.id;});});
+  }));
 
   var [search,setSearch]=useState("");
   var [selId,setSelId]=useState(null);
@@ -1383,6 +1399,8 @@ function VisaAgentTab(props){
   var [filterOA,setFilterOA]=useState("all");
   var [showAddEdit,setShowAddEdit]=useState(false);
   var [editItem,setEditItem]=useState(null);
+  var [showEditCountry,setShowEditCountry]=useState(false);
+  var [editingCountry,setEditingCountry]=useState(null);
   var [msgs,setMsgs]=useState([{role:"assistant",content:"Salam! 🌍 Main Olympia Travel ka Visa Assistant hoon.\n\nKisi bhi country ka visa, documents, fees ke baare mein puchein!"}]);
   var [input,setInput]=useState("");
   var [botLoading,setBotLoading]=useState(false);
@@ -1587,9 +1605,13 @@ function VisaAgentTab(props){
                     {displayCountry.onArrival&&<span style={{background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>✅ Free / On Arrival</span>}
                   </div>
                 </div>
-                <div style={{display:"flex",gap:6}}>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   <button onClick={function(){printCountry(displayCountry);}}
                     style={{background:"#16a34a",color:"#fff",border:"none",borderRadius:8,padding:"8px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>🖨️ Print</button>
+                  <button onClick={function(){
+                    setEditingCountry(Object.assign({},displayCountry));
+                    setShowEditCountry(true);
+                  }} style={{background:"#eff6ff",border:"1px solid #bfdbfe",color:"#1d4ed8",borderRadius:8,padding:"8px 14px",fontWeight:700,cursor:"pointer",fontSize:12}}>✏️ Edit</button>
                   <button onClick={function(){setSelId(null);setSelSubId(null);}}
                     style={{background:"#fee2e2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:8,padding:"8px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>✕</button>
                 </div>
@@ -1619,6 +1641,58 @@ function VisaAgentTab(props){
             </div>
           )}
         </div>
+      )}
+
+      {/* Edit Country Modal */}
+      {showEditCountry&&editingCountry&&(
+        <Modal title={"✏️ Edit: "+editingCountry.name} onClose={function(){setShowEditCountry(false);setEditingCountry(null);}}>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {[["name","Country Name"],["flag","Flag Emoji"],["fees","Agency Fee (PKR)"],["processing","Processing Time"],["validity","Validity"],["type","Visa Type"]].map(function(fl){
+              var fk=fl[0];
+              return(
+                <div key={fk}>
+                  <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>{fl[1]}</label>
+                  <input value={editingCountry[fk]||""} onChange={function(ev){var v=ev.target.value;setEditingCountry(function(p){var n=Object.assign({},p);n[fk]=v;return n;});}}
+                    style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+                </div>
+              );
+            })}
+            <div>
+              <div style={{fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:5}}>Visa Status</div>
+              <div style={{display:"flex",gap:0,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+                <button onClick={function(){setEditingCountry(function(p){return Object.assign({},p,{onArrival:false});});}}
+                  style={{flex:1,padding:"9px 0",border:"none",background:!editingCountry.onArrival?"#dc2626":"#fff",color:!editingCountry.onArrival?"#fff":"#6b7280",fontWeight:700,cursor:"pointer",fontSize:12}}>📋 Visa Required</button>
+                <button onClick={function(){setEditingCountry(function(p){return Object.assign({},p,{onArrival:true});});}}
+                  style={{flex:1,padding:"9px 0",border:"none",background:editingCountry.onArrival?"#16a34a":"#fff",color:editingCountry.onArrival?"#fff":"#6b7280",fontWeight:700,cursor:"pointer",fontSize:12}}>✅ Free/On Arrival</button>
+              </div>
+            </div>
+            <div>
+              <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Requirements (1 per line)</label>
+              <textarea value={editingCountry.requirements||""} onChange={function(e){var v=e.target.value;setEditingCountry(function(p){return Object.assign({},p,{requirements:v});});}} rows={6}
+                style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Notes</label>
+              <textarea value={editingCountry.notes||""} onChange={function(e){var v=e.target.value;setEditingCountry(function(p){return Object.assign({},p,{notes:v});});}} rows={3}
+                style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
+            <button onClick={function(){
+              // Save to customCountries (override default)
+              var existing=customCountries.findIndex(function(c){return c.id===editingCountry.id;});
+              var updated;
+              if(existing>=0){
+                updated=customCountries.map(function(c){return c.id===editingCountry.id?editingCountry:c;});
+              } else {
+                updated=customCountries.concat([editingCountry]);
+              }
+              saveCustom(updated);
+              setShowEditCountry(false);
+              setEditingCountry(null);
+            }} style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
+              💾 Save Changes
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* BOT TAB */}
@@ -3512,6 +3586,9 @@ export default function App(){
     try{
       var d=ld("olympia_users_config",null);
       if(d&&Array.isArray(d.users)&&d.users.length>0) return d;
+      // Try backup
+      var bk=localStorage.getItem("olympia_users_config_bk");
+      if(bk){var bd=JSON.parse(bk);if(bd&&Array.isArray(bd.users)&&bd.users.length>0) return bd;}
     }catch(e){}
     return DEFAULT_USERS;
   });
@@ -3582,7 +3659,7 @@ export default function App(){
         {fb:"olympia_groups",    setter:setGroupsR,   lk:"olympia_groups",    getter:function(){return ld("olympia_groups",[]);}},
         {fb:"olympia_udhar",     setter:setUdharR,    lk:"olympia_udhar",     getter:function(){return ld("olympia_udhar",[]);}},
         {fb:"olympia_staffexp",  setter:setStaffExpR, lk:"olympia_staffexp",  getter:function(){return ld("olympia_staffexp",[]);}},
-        {fb:"olympia_users_config",setter:function(d){if(d&&Array.isArray(d.users)&&d.users.length>0){setUsersConfigR(d);sv("olympia_users_config",d);}},lk:"olympia_users_config",getter:function(){return ld("olympia_users_config",null);}},
+        {fb:"olympia_users_config",setter:function(d){if(d&&Array.isArray(d.users)&&d.users.length>0){setUsersConfigR(d);sv("olympia_users_config",d);try{localStorage.setItem("olympia_users_config_bk",JSON.stringify(d));}catch(e){}}},lk:"olympia_users_config",getter:function(){return ld("olympia_users_config",null);}},
       ];
 
       keys.forEach(function(kv){
