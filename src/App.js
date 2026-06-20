@@ -1431,34 +1431,29 @@ function VisaAgentTab(props){
 
   function generateDoc(){
     if(!docInfo.clientName.trim()||!docInfo.destination.trim()){alert("Client name aur destination zaroor likhein!");return;}
-    setDocLoading(true);setGeneratedDoc("");
-    var prompts={
-      cover:"Write a formal visa cover letter for: Client: "+docInfo.clientName+", Passport: "+docInfo.passport+", Destination: "+docInfo.destination+", Purpose: "+docInfo.purpose+", Duration: "+docInfo.duration+", Travel Date: "+docInfo.travelDate+". Issued by Olympia Travel & Tours, Office No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi. Phone: +92-331-2351419, +92-339-4236777. Email: olympiatraveltours@gmail.com. Make it formal, professional, and consulate-ready.",
-      bonafide:"Write a bonafide certificate/NOC letter for visa purposes for: Client: "+docInfo.clientName+", Passport: "+docInfo.passport+", Destination: "+docInfo.destination+", Purpose: "+docInfo.purpose+", Travel Date: "+docInfo.travelDate+", Duration: "+docInfo.duration+". Issued by Olympia Travel & Tours, Office No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi. Phone: +92-331-2351419. Make it formal.",
-      hotel:"Write a hotel booking confirmation letter for: Guest: "+docInfo.clientName+", Passport: "+docInfo.passport+", Destination: "+docInfo.destination+", Check-in: "+docInfo.travelDate+", Duration: "+docInfo.duration+". Issued by Olympia Travel & Tours on behalf of the hotel. Make it look like official hotel confirmation.",
-      ticket:"Write a flight ticket booking confirmation for: Passenger: "+docInfo.clientName+", Passport: "+docInfo.passport+", Route: Karachi to "+docInfo.destination+", Travel Date: "+docInfo.travelDate+", Return after "+docInfo.duration+". Issued by Olympia Travel & Tours. Make it look like official airline booking reference."
-    };
-    fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "anthropic-dangerous-direct-browser-access":"true"
-      },
-      body:JSON.stringify({
-        model:"claude-sonnet-4-6",max_tokens:1000,
-        system:"You are a professional travel document writer for Olympia Travel & Tours, Karachi, Pakistan. Write formal, consulate-ready documents in proper English. Include today's date: "+new Date().toLocaleDateString("en-PK")+". Always sign off with Olympia Travel & Tours details.",
-        messages:[{role:"user",content:prompts[docType]}]
-      })
-    }).then(function(r){return r.json();}).then(function(d){
-      setGeneratedDoc(d.content&&d.content[0]?d.content[0].text:"Error. Please try again.");
-      setDocLoading(false);
-    }).catch(function(err){
-      setGeneratedDoc("Error: "+err.message+". Check internet connection.");
-      setDocLoading(false);
-    });
+    var n=docInfo.clientName.trim();
+    var pp=docInfo.passport.trim()||"[Passport No]";
+    var dest=docInfo.destination.trim();
+    var purp=docInfo.purpose.trim()||"Tourism";
+    var dur=docInfo.duration.trim()||"7 days";
+    var tdt=docInfo.travelDate?new Date(docInfo.travelDate).toLocaleDateString("en-PK",{day:"2-digit",month:"long",year:"numeric"}):"[Travel Date]";
+    var tod=new Date().toLocaleDateString("en-PK",{day:"2-digit",month:"long",year:"numeric"});
+    var ref="OTT/"+new Date().getFullYear()+"/"+Math.floor(Math.random()*9000+1000);
+    var sig="\n\n___________________________\nAuthorized Signatory\nOlympia Travel & Tours\nGL No. 6033\nOffice No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi\nTel: +92-331-2351419 | +92-339-4236777\nEmail: olympiatraveltours@gmail.com\nDate: "+tod;
+    var doc="";
+    if(docType==="cover"){
+      doc="Ref No: "+ref+"\nDate: "+tod+"\n\nTo,\nThe Visa Officer\n"+dest+" Embassy / Consulate\nIslamabad, Pakistan\n\nSubject: Cover Letter for Tourist Visa Application - "+n+"\n\nRespected Sir/Madam,\n\nIt is respectfully submitted that Mr./Ms. "+n+", holder of Pakistani Passport No. "+pp+", intends to visit "+dest+" for "+purp+" purposes.\n\nThe applicant is a valued client of Olympia Travel & Tours, a licensed travel agency (GL No. 6033) based in Karachi, Pakistan. We are pleased to confirm that we have made the following travel arrangements:\n\n- Destination: "+dest+"\n- Purpose of Visit: "+purp+"\n- Duration of Stay: "+dur+"\n- Intended Travel Date: "+tdt+"\n\nThe applicant has strong ties to Pakistan and will return upon completion of the visit. All necessary financial arrangements have been made.\n\nWe kindly request the concerned authorities to grant a tourist visa to our client. We assure you that the applicant will abide by all visa conditions and will not overstay.\n\nYours faithfully,"+sig;
+    } else if(docType==="bonafide"){
+      doc="Ref No: "+ref+"\nDate: "+tod+"\n\nTO WHOM IT MAY CONCERN\n\nBONAFIDE CERTIFICATE / NO OBJECTION CERTIFICATE\n\nThis is to certify that Mr./Ms. "+n+", holder of Pakistani Passport No. "+pp+", is a bonafide traveler and registered client of Olympia Travel & Tours.\n\nThis certificate is issued upon request of the above-mentioned individual who intends to travel to "+dest+" for "+purp+" purposes, commencing from "+tdt+" for a duration of "+dur+".\n\nWe have no objection to the travel of the above-mentioned person. We confirm that:\n1. The applicant is a genuine traveler with no criminal record.\n2. All travel arrangements have been confirmed by our agency.\n3. The applicant will return to Pakistan upon completion of the visit.\n4. This certificate is issued for visa application purposes only.\n\nIssued by:"+sig;
+    } else if(docType==="hotel"){
+      doc="HOTEL BOOKING CONFIRMATION\n\nBooking Reference: "+ref+"\nDate of Issue: "+tod+"\n\nGuest Name: "+n+"\nPassport No.: "+pp+"\nDestination: "+dest+"\nCheck-in Date: "+tdt+"\nDuration of Stay: "+dur+"\nCheck-out Date: [As per itinerary]\n\nHotel: [Hotel Name, "+dest+"]\nRoom Type: Standard / Deluxe Room\nMeal Plan: Bed & Breakfast\nTotal Amount: [As per package]\nPayment Status: CONFIRMED\n\nThis booking has been confirmed by Olympia Travel & Tours on behalf of the guest.\n\n"+sig.trim();
+    } else if(docType==="ticket"){
+      doc="FLIGHT BOOKING CONFIRMATION\n\nBooking Reference: "+ref+"\nDate of Issue: "+tod+"\n\nPassenger Name: "+n+"\nPassport No.: "+pp+"\nNationality: Pakistani\n\nOUTBOUND FLIGHT:\nRoute: Karachi (KHI) to "+dest+"\nDate: "+tdt+"\nFlight: [Airline] [Flight No.]\nClass: Economy\nStatus: CONFIRMED\n\nRETURN FLIGHT:\nRoute: "+dest+" to Karachi (KHI)\nDate: [After "+dur+"]\nFlight: [Airline] [Flight No.]\nClass: Economy\nStatus: CONFIRMED\n\nTicket Amount: [As per airline]\nPayment Status: PAID\n\nThis booking has been confirmed by Olympia Travel & Tours. Please carry this confirmation with your valid passport.\n\n"+sig.trim();
+    }
+    setGeneratedDoc(doc);
   }
 
-  function sendMsg(){
+    function sendMsg(){
     if(!input.trim()||botLoading) return;
     var um={role:"user",content:input.trim()};
     var nm=msgs.concat([um]);
