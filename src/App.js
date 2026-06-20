@@ -1318,20 +1318,35 @@ var VISA_DATA=[
     ]
   },
   // ── MALAYSIA (2 types) ──
-  {id:"my_evisa",name:"Malaysia — eVisa",flag:"🇲🇾",fees:"8000",processing:"3-5 working days",validity:"30 days single / 90 days multiple",type:"Tourist eVisa",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement 3 months\nReturn tickets\nHotel booking\nEmployment/business letter",notes:"Apply online at evisa.imi.gov.my. Easier and faster process. Recommended."},
-  {id:"my_sticker",name:"Malaysia — Sticker Visa",flag:"🇲🇾",fees:"12000",processing:"7-10 working days",validity:"30/90 days",type:"Tourist Sticker Visa",onArrival:false,requirements:"Valid Passport (6 months)\n2 Passport photos\nBank statement 3-6 months\nEmployment letter\nReturn tickets\nHotel booking\nTravel insurance\nApplication form",notes:"Apply at Malaysian Embassy Islamabad or High Commission Karachi. For longer validity."},
+  {id:"my",name:"Malaysia",flag:"🇲🇾",isGroup:true,fees:"8,000-12,000",processing:"3-10 days",onArrival:false,
+    children:[
+      {id:"my_evisa",name:"eVisa (Online)",flag:"🇲🇾",fees:"8000",processing:"3-5 working days",validity:"30/90 days",type:"Tourist eVisa",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement 3 months\nReturn tickets\nHotel booking\nEmployment/business letter",notes:"Apply online at evisa.imi.gov.my. Easier and faster. Recommended option."},
+      {id:"my_sticker",name:"Sticker Visa (Embassy)",flag:"🇲🇾",fees:"12000",processing:"7-10 working days",validity:"30/90 days",type:"Tourist Sticker Visa",onArrival:false,requirements:"Valid Passport (6 months)\n2 Passport photos\nBank statement 3-6 months\nEmployment letter\nReturn tickets\nHotel booking\nTravel insurance\nApplication form",notes:"Apply at Malaysian Embassy Islamabad or High Commission Karachi."}
+    ]},
   // ── TURKEY (2 types) ──
-  {id:"tr_evisa",name:"Turkey — eVisa",flag:"🇹🇷",fees:"9000",processing:"Immediate - 24 hours",validity:"30 days",type:"Tourist eVisa",onArrival:false,requirements:"Valid Passport\nEmail address\nCredit or Debit card",notes:"Easiest option. Apply at evisa.gov.tr. Instant approval usually. Pakistan passport approved."},
-  {id:"tr_sticker",name:"Turkey — Sticker Visa",flag:"🇹🇷",fees:"14000",processing:"5-7 working days",validity:"30/90 days single or multiple",type:"Tourist Sticker Visa",onArrival:false,requirements:"Valid Passport (6 months)\n2 Passport photos\nBank statement 3 months\nEmployment letter\nReturn tickets\nHotel booking",notes:"Apply at Turkish Embassy Islamabad or Consulate Karachi. For multiple entry or longer validity."},
+  {id:"tr",name:"Turkey",flag:"🇹🇷",isGroup:true,fees:"9,000-14,000",processing:"Immediate-7 days",onArrival:false,
+    children:[
+      {id:"tr_evisa",name:"eVisa (Online)",flag:"🇹🇷",fees:"9000",processing:"Immediate - 24 hours",validity:"30 days",type:"Tourist eVisa",onArrival:false,requirements:"Valid Passport\nEmail address\nCredit or Debit card",notes:"Easiest option. Apply at evisa.gov.tr. Instant approval. Pakistan passport approved."},
+      {id:"tr_sticker",name:"Sticker Visa (Embassy)",flag:"🇹🇷",fees:"14000",processing:"5-7 working days",validity:"30/90 days",type:"Tourist Sticker Visa",onArrival:false,requirements:"Valid Passport (6 months)\n2 Passport photos\nBank statement 3 months\nEmployment letter\nReturn tickets\nHotel booking",notes:"Apply at Turkish Embassy Islamabad or Consulate Karachi. For multiple entry."},
+      {id:"tr_multi",name:"Multiple Entry Visa",flag:"🇹🇷",fees:"18000",processing:"7-10 working days",validity:"1 year multiple",type:"Tourist Multiple Entry",onArrival:false,requirements:"Valid Passport (6 months)\n2 Passport photos\nStrong bank statement\nEmployment letter\nPrevious travel history\nReturn tickets",notes:"For frequent travelers to Turkey. Apply at Embassy with strong profile."}
+    ]},
   // ── UAE (multiple types) ──
-  {id:"ae_30",name:"UAE — 30 Day Tourist",flag:"🇦🇪",fees:"18000",processing:"3-5 working days",validity:"30 days",type:"Tourist Visa",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo (white bg)\nBank statement 3 months\nEmployment/business letter\nHotel booking\nReturn tickets\nTravel insurance",notes:"Most common visa. Hotel/tour package booking required for Pakistan passport."},
-  {id:"ae_60",name:"UAE — 60 Day Tourist",flag:"🇦🇪",fees:"22000",processing:"3-5 working days",validity:"60 days",type:"Tourist Visa",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement 3 months\nEmployment letter\nHotel booking\nReturn tickets",notes:"For longer stays. Same requirements as 30 day."},
-  {id:"ae_visit",name:"UAE — Visit/Family Visa",flag:"🇦🇪",fees:"20000",processing:"5-7 working days",validity:"30-90 days",type:"Visit Visa",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement\nSponsor (UAE resident) copy of visa/ID\nRelationship proof if family",notes:"Requires sponsor in UAE — family member or friend who is UAE resident."},
+  {id:"ae",name:"UAE",flag:"🇦🇪",isGroup:true,fees:"18,000-25,000",processing:"3-7 days",onArrival:false,
+    children:[
+      {id:"ae_30",name:"30 Day Tourist Visa",flag:"🇦🇪",fees:"18000",processing:"3-5 working days",validity:"30 days",type:"Tourist",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo (white bg)\nBank statement 3 months\nEmployment/business letter\nHotel booking\nReturn tickets\nTravel insurance",notes:"Most common visa. Hotel/tour package booking required."},
+      {id:"ae_60",name:"60 Day Tourist Visa",flag:"🇦🇪",fees:"22000",processing:"3-5 working days",validity:"60 days",type:"Tourist",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement 3 months\nEmployment letter\nHotel booking\nReturn tickets",notes:"For longer stays. Same requirements as 30 day."},
+      {id:"ae_90",name:"90 Day Tourist Visa",flag:"🇦🇪",fees:"28000",processing:"3-5 working days",validity:"90 days",type:"Tourist",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement 3 months\nEmployment letter\nHotel booking\nReturn tickets",notes:"Extended stay visa."},
+      {id:"ae_visit",name:"Visit/Family Visa",flag:"🇦🇪",fees:"20000",processing:"5-7 working days",validity:"30-90 days",type:"Visit",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement\nSponsor UAE resident copy of visa/ID\nRelationship proof if family",notes:"Requires sponsor in UAE — UAE resident family or friend."}
+    ]},
   // ── INDIVIDUAL COUNTRIES ──
   {id:"sa",name:"Saudi Arabia",flag:"🇸🇦",fees:"22000",processing:"3-7 working days",validity:"90 days",type:"Tourist/Visit",onArrival:false,requirements:"Valid Passport (6 months)\nPassport photo\nBank statement 3 months\nHotel booking\nReturn tickets\nPolio vaccination certificate",notes:"Tourist e-visa available online. Umrah visa through authorized operators only."},
   {id:"ge",name:"Georgia",flag:"🇬🇪",fees:"0",processing:"Immediate",validity:"365 days",type:"Tourist",onArrival:true,requirements:"Valid Passport\nReturn tickets\nSufficient funds (recommended)",notes:"FREE visa for 1 year! Best destination for Pakistan passport. No visa required at all."},
   {id:"az",name:"Azerbaijan",flag:"🇦🇿",fees:"8500",processing:"Immediate (ASAN e-visa)",validity:"30 days",type:"Tourist",onArrival:false,requirements:"Valid Passport\nEmail address\nCredit/Debit card",notes:"Very easy e-visa at evisa.gov.az. Pakistan passport approved."},
-  {id:"id",name:"Indonesia",flag:"🇮🇩",fees:"0",processing:"On arrival",validity:"30 days",type:"Tourist",onArrival:true,requirements:"Valid Passport\nReturn tickets\nHotel booking\nSufficient funds",notes:"Visa free 30 days for Pakistan passport since 2023. Bali, Jakarta, Lombok."},
+  {id:"id",name:"Indonesia",flag:"🇮🇩",isGroup:true,fees:"Free-7,000",processing:"On arrival/online",onArrival:true,
+    children:[
+      {id:"id_free",name:"Visa Free (30 days)",flag:"🇮🇩",fees:"0",processing:"On arrival",validity:"30 days",type:"Visa Free",onArrival:true,requirements:"Valid Passport\nReturn tickets\nHotel booking\nSufficient funds",notes:"FREE 30 days for Pakistan passport since 2023. Bali, Jakarta, Lombok."},
+      {id:"id_b211",name:"B211A Social Visit (60 days)",flag:"🇮🇩",fees:"7000",processing:"3-5 days online",validity:"60 days extendable",type:"B211A Visa",onArrival:false,requirements:"Valid Passport\nReturn tickets\nHotel booking\nBank statement\nSponsorship letter (from Indonesian)",notes:"For longer stays. Apply online. Can be extended in Indonesia."}
+    ]},
   {id:"np",name:"Nepal",flag:"🇳🇵",fees:"0",processing:"On arrival",validity:"15-90 days",type:"Tourist",onArrival:true,requirements:"Valid Passport\nPassport photo\nReturn tickets\nUSD 25-100 (visa fee on arrival)",notes:"Visa on arrival at Tribhuvan Airport. Fee based on duration. Himalayas, Everest."},
   {id:"mv",name:"Maldives",flag:"🇲🇻",fees:"0",processing:"On arrival",validity:"30 days",type:"Tourist",onArrival:true,requirements:"Valid Passport\nReturn/onward ticket\nResort/hotel booking (mandatory)\nProof of funds USD 100/day",notes:"Free on arrival. Resort booking mandatory. Luxury beach destination."},
   {id:"lk",name:"Sri Lanka",flag:"🇱🇰",fees:"7000",processing:"Immediate (ETA online)",validity:"30 days",type:"Tourist",onArrival:false,requirements:"Valid Passport\nETA online application (eta.gov.lk)\nReturn tickets\nHotel booking",notes:"Electronic Travel Authorization online. Easy for Pakistan passport."},
@@ -1406,7 +1421,11 @@ function VisaAgentTab(props){
       ticket:"Write a flight ticket booking confirmation for: Passenger: "+docInfo.clientName+", Passport: "+docInfo.passport+", Route: Karachi to "+docInfo.destination+", Travel Date: "+docInfo.travelDate+", Return after "+docInfo.duration+". Issued by Olympia Travel & Tours. Make it look like official airline booking reference."
     };
     fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",headers:{"Content-Type":"application/json"},
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
       body:JSON.stringify({
         model:"claude-sonnet-4-6",max_tokens:1000,
         system:"You are a professional travel document writer for Olympia Travel & Tours, Karachi, Pakistan. Write formal, consulate-ready documents in proper English. Include today's date: "+new Date().toLocaleDateString("en-PK")+". Always sign off with Olympia Travel & Tours details.",
@@ -1415,8 +1434,8 @@ function VisaAgentTab(props){
     }).then(function(r){return r.json();}).then(function(d){
       setGeneratedDoc(d.content&&d.content[0]?d.content[0].text:"Error. Please try again.");
       setDocLoading(false);
-    }).catch(function(){
-      setGeneratedDoc("Connection error. Please try again.");
+    }).catch(function(err){
+      setGeneratedDoc("Error: "+err.message+". Check internet connection.");
       setDocLoading(false);
     });
   }
@@ -1427,7 +1446,11 @@ function VisaAgentTab(props){
     var nm=msgs.concat([um]);
     setMsgs(nm);setInput("");setBotLoading(true);
     fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",headers:{"Content-Type":"application/json"},
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
       body:JSON.stringify({
         model:"claude-sonnet-4-6",max_tokens:1000,
         system:"You are a visa expert for Olympia Travel & Tours Karachi. Answer in Roman Urdu + English. Help about visa requirements, processing, fees, tips for Pakistan passport holders. Agency: 03312351419.",
@@ -3478,8 +3501,8 @@ export default function App(){
     }
   },[usersConfig]);
 
-  var ALL_SECTION_IDS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries"];
-  var SECTION_LABELS={dashboard:"Dashboard",bookings:"Bookings",customers:"Customers",expenses:"Expenses",reports:"Reports",partners:"Partners",groups:"Groups",udhar:"Udhar",staffexp:"Staff Expenses",personal:"My Expenses",marketing:"Marketing",queries:"Queries"};
+  var ALL_SECTION_IDS=["dashboard","bookings","customers","expenses","reports","partners","groups","udhar","staffexp","personal","marketing","queries","visaagent"];
+  var SECTION_LABELS={dashboard:"Dashboard",bookings:"Bookings",customers:"Customers",expenses:"Expenses",reports:"Reports",partners:"Partners",groups:"Groups",udhar:"Udhar 💰",staffexp:"Staff Expenses",personal:"My Expenses",marketing:"Marketing",queries:"Queries",visaagent:"🌍 Visa Center"};
   var DEFAULT_USERS={users:[
     {id:"admin",  name:"Admin",   password:"olympia2026", role:"admin", tabs:null},
     {id:"staff1", name:"Staff 1", password:"staff123",    role:"staff", tabs:["bookings","queries","groups","staffexp"]},
@@ -3778,55 +3801,172 @@ export default function App(){
 
       <div style={{padding:"18px 20px"}}>
 
-        {tab==="dashboard"&&(
+        {tab==="dashboard"&&(function(){
+          // Booking stats
+          var tRev2=bookings.reduce(function(s,b){return s+Number(b.amount||0);},0);
+          var tProfit2=bookings.reduce(function(s,b){return s+Number(b.amount||0)-Number(b.cost||0)-Number(b.commission||0);},0);
+          var tExp2=expenses.reduce(function(s,e){return s+Number(e.amount||0);},0);
+          // Group stats
+          var groupRev=groups.reduce(function(s,g){
+            var mems=Array.isArray(g.members)?g.members:[];
+            return s+mems.reduce(function(ms,m){return ms+Number(m.price||g.pricePerPerson||0);},0);
+          },0);
+          var groupExp=groups.reduce(function(s,g){
+            var exps=Array.isArray(g.expenses)?g.expenses:[];
+            return s+exps.reduce(function(es,e){return es+Number(e.amount||0);},0);
+          },0);
+          var groupProfit=groupRev-groupExp;
+          var totalMembers=groups.reduce(function(s,g){return s+(Array.isArray(g.members)?g.members.length:0);},0);
+          // Combined
+          var totalRevAll=tRev2+groupRev;
+          var totalProfitAll=tProfit2+groupProfit;
+          var netAll=totalRevAll-tExp2-groupExp;
+          var pend2=bookings.filter(function(b){return b.status!=="Paid";}).length;
+          var pendQueries=queries.filter(function(q){return q.status==="New"||q.status==="Contacted";}).length;
+          // Expense by category
+          var expByCat=expenses.reduce(function(a,e){a[e.category]=(a[e.category]||0)+Number(e.amount||0);return a;},{});
+          // Recent bookings
+          var recentBk=bookings.slice(-5).reverse();
+          // Active groups
+          var activeGroups=groups.filter(function(g){return g.status!=="Closed";}).slice(-3);
+
+          return(
           <div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:18}}>
-              <Stat icon="💰" label="Revenue"   value={pkr(tRev)}    color={C.accent}/>
-              <Stat icon="📈" label="Bk Profit" value={pkr(tProfit)} color={C.gold}/>
-              <Stat icon="📤" label="Expenses"  value={pkr(tExp)}    color={C.red}/>
-              <Stat icon="🏦" label="Net"        value={pkr(net)}     color={net>=0?C.gold:C.red}/>
-              <Stat icon="⏳" label="Pending"   value={pend+" Bookings"}   color="#d97706"/>
-              <Stat icon="👥" label="Customers" value={customers.length} color={C.accent}/>
-            </div>
-            <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-              <div style={{flex:1.5,minWidth:240,background:C.white,border:"1.5px solid "+C.border,borderRadius:14,padding:16,boxShadow:C.shadow}}>
-                <div style={{fontWeight:800,marginBottom:10,fontSize:12,color:C.accent}}>Recent Bookings</div>
-                {bookings.slice(-5).reverse().map(function(b){var p=Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);return(
-                  <div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid "+C.border}}>
-                    <div><div style={{fontWeight:700,fontSize:12}}>{b.customer}</div><div style={{color:C.muted,fontSize:10}}>{b.destination} - {b.type}</div></div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{color:C.accent,fontWeight:800,fontSize:12}}>{pkr(b.amount)}</div>
-                      <div style={{color:p>=0?C.gold:C.red,fontSize:10,fontWeight:600}}>P:{pkr(p)}</div>
-                      <Badge status={b.status}/>
-                    </div>
-                  </div>
-                );})}
-                {bookings.length===0&&<div style={{color:C.muted,fontSize:12}}>Koi booking nahi</div>}
-              </div>
-              <div style={{flex:1,minWidth:180,background:C.white,border:"1.5px solid "+C.border,borderRadius:14,padding:16,boxShadow:C.shadow}}>
-                <div style={{fontWeight:800,marginBottom:8,fontSize:12,color:C.accent}}>Bank Account</div>
-                <div style={{background:C.accentSoft,border:"1px solid "+C.border,borderRadius:8,padding:"9px 11px",marginBottom:12,fontSize:11}}>
-                  <div style={{color:C.accent,fontWeight:800,marginBottom:3}}>{AGENCY.bank.name}</div>
-                  <div style={{marginBottom:2}}>Title: {AGENCY.bank.title}</div>
-                  <div style={{marginBottom:2}}>A/C: {AGENCY.bank.account}</div>
-                  <div style={{fontSize:9,color:C.muted,wordBreak:"break-all"}}>IBAN: {AGENCY.bank.iban}</div>
+            {/* KPI Row 1 - Main */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:14}}>
+              {[
+                {icon:"💰",label:"Total Revenue",val:pkr(totalRevAll),color:"#16a34a",bg:"#f0fdf4",border:"#bbf7d0"},
+                {icon:"📈",label:"Total Profit",val:pkr(totalProfitAll),color:"#d97706",bg:"#fefce8",border:"#fde68a"},
+                {icon:"📤",label:"Total Expenses",val:pkr(tExp2+groupExp),color:"#dc2626",bg:"#fff5f5",border:"#fecaca"},
+                {icon:"🏦",label:"Net Balance",val:pkr(netAll),color:netAll>=0?"#16a34a":"#dc2626",bg:netAll>=0?"#f0fdf4":"#fff5f5",border:netAll>=0?"#bbf7d0":"#fecaca"},
+                {icon:"⏳",label:"Unpaid",val:pend2+" Bookings",color:"#d97706",bg:"#fefce8",border:"#fde68a"},
+                {icon:"🔔",label:"New Queries",val:pendQueries+" Pending",color:"#7c3aed",bg:"#f5f3ff",border:"#ddd6fe"},
+              ].map(function(s){return(
+                <div key={s.label} style={{background:s.bg,border:"1.5px solid "+s.border,borderRadius:12,padding:"14px 16px"}}>
+                  <div style={{fontSize:20,marginBottom:4}}>{s.icon}</div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",textTransform:"uppercase",marginBottom:3}}>{s.label}</div>
+                  <div style={{fontSize:16,fontWeight:900,color:s.color}}>{s.val}</div>
                 </div>
-                <div style={{fontWeight:800,marginBottom:8,fontSize:12,color:C.accent}}>Expenses</div>
-                {Object.entries(expenses.reduce(function(a,e){a[e.category]=(a[e.category]||0)+e.amount;return a;},{})).map(function(kv){return(
-                  <div key={kv[0]} style={{marginBottom:8}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:2}}>
-                      <span style={{fontWeight:600}}>{kv[0]}</span><span style={{color:C.red,fontWeight:700}}>{pkr(kv[1])}</span>
+              );})}
+            </div>
+
+            {/* KPI Row 2 - Breakdown */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+              <div style={{background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:12,padding:14}}>
+                <div style={{fontWeight:800,color:"#16a34a",fontSize:12,marginBottom:10,textTransform:"uppercase"}}>✈️ Bookings</div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Revenue</span>
+                  <span style={{fontWeight:700,color:"#16a34a",fontSize:12}}>{pkr(tRev2)}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Profit</span>
+                  <span style={{fontWeight:700,color:"#d97706",fontSize:12}}>{pkr(tProfit2)}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between"}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Total Bookings</span>
+                  <span style={{fontWeight:700,fontSize:12}}>{bookings.length}</span>
+                </div>
+              </div>
+              <div style={{background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:12,padding:14}}>
+                <div style={{fontWeight:800,color:"#7c3aed",fontSize:12,marginBottom:10,textTransform:"uppercase"}}>👥 Groups</div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Revenue</span>
+                  <span style={{fontWeight:700,color:"#16a34a",fontSize:12}}>{pkr(groupRev)}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Profit</span>
+                  <span style={{fontWeight:700,color:"#d97706",fontSize:12}}>{pkr(groupProfit)}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between"}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Total Members</span>
+                  <span style={{fontWeight:700,fontSize:12}}>{totalMembers}</span>
+                </div>
+              </div>
+              <div style={{background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:12,padding:14}}>
+                <div style={{fontWeight:800,color:"#dc2626",fontSize:12,marginBottom:10,textTransform:"uppercase"}}>📊 Summary</div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Customers</span>
+                  <span style={{fontWeight:700,fontSize:12}}>{customers.length}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Groups</span>
+                  <span style={{fontWeight:700,fontSize:12}}>{groups.length}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between"}}>
+                  <span style={{color:"#6b7280",fontSize:12}}>Queries</span>
+                  <span style={{fontWeight:700,fontSize:12}}>{queries.length}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom row */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+              {/* Recent Bookings */}
+              <div style={{background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:12,padding:16}}>
+                <div style={{fontWeight:800,color:"#16a34a",fontSize:12,marginBottom:10,textTransform:"uppercase"}}>🕐 Recent Bookings</div>
+                {recentBk.map(function(b){
+                  var p=Number(b.amount||0)-Number(b.cost||0)-Number(b.commission||0);
+                  return(
+                    <div key={b.id} style={{padding:"8px 0",borderBottom:"1px solid #f3f4f6"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div>
+                          <div style={{fontWeight:700,fontSize:12}}>{b.customer}</div>
+                          <div style={{color:"#6b7280",fontSize:10}}>{b.destination}</div>
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                          <div style={{color:"#16a34a",fontWeight:800,fontSize:12}}>{pkr(b.amount)}</div>
+                          <Badge status={b.status}/>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{height:4,background:"#dcfce7",borderRadius:4}}>
-                      <div style={{width:Math.min(100,(kv[1]/tExp)*100)+"%",height:"100%",background:C.accent,borderRadius:4}}/>
+                  );
+                })}
+                {bookings.length===0&&<div style={{color:"#9ca3af",fontSize:12,textAlign:"center",padding:"10px 0"}}>Koi booking nahi</div>}
+              </div>
+
+              {/* Active Groups */}
+              <div style={{background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:12,padding:16}}>
+                <div style={{fontWeight:800,color:"#7c3aed",fontSize:12,marginBottom:10,textTransform:"uppercase"}}>👥 Active Groups</div>
+                {activeGroups.map(function(g){
+                  var mems=Array.isArray(g.members)?g.members:[];
+                  var rev=mems.reduce(function(s,m){return s+Number(m.price||g.pricePerPerson||0);},0);
+                  return(
+                    <div key={g.id} style={{padding:"8px 0",borderBottom:"1px solid #f3f4f6"}}>
+                      <div style={{fontWeight:700,fontSize:12}}>{g.name}</div>
+                      <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+                        <span style={{color:"#6b7280",fontSize:10}}>{mems.length} members</span>
+                        <span style={{color:"#7c3aed",fontWeight:700,fontSize:11}}>{pkr(rev)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {groups.length===0&&<div style={{color:"#9ca3af",fontSize:12,textAlign:"center",padding:"10px 0"}}>Koi group nahi</div>}
+              </div>
+
+              {/* Bank + Expenses */}
+              <div style={{background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:12,padding:16}}>
+                <div style={{fontWeight:800,color:"#dc2626",fontSize:12,marginBottom:8,textTransform:"uppercase"}}>🏦 Bank & Expenses</div>
+                <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,padding:"9px 11px",marginBottom:12,fontSize:11}}>
+                  <div style={{color:"#16a34a",fontWeight:800,marginBottom:2}}>{AGENCY.bank.name}</div>
+                  <div style={{marginBottom:1}}>A/C: {AGENCY.bank.account}</div>
+                  <div style={{fontSize:9,color:"#6b7280",wordBreak:"break-all"}}>IBAN: {AGENCY.bank.iban}</div>
+                </div>
+                {Object.entries(expByCat).slice(0,5).map(function(kv){return(
+                  <div key={kv[0]} style={{marginBottom:7}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:2}}>
+                      <span style={{fontWeight:600}}>{kv[0]}</span>
+                      <span style={{color:"#dc2626",fontWeight:700}}>{pkr(kv[1])}</span>
+                    </div>
+                    <div style={{height:4,background:"#f3f4f6",borderRadius:4}}>
+                      <div style={{width:Math.min(100,tExp2>0?(kv[1]/tExp2)*100:0)+"%",height:"100%",background:"#dc2626",borderRadius:4}}/>
                     </div>
                   </div>
                 );})}
               </div>
             </div>
           </div>
-        )}
-
+          );
+        }())}
         {tab==="bookings"&&(
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
