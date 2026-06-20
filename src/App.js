@@ -1371,6 +1371,10 @@ function VisaAgentTab(props){
   var [msgs,setMsgs]=useState([{role:"assistant",content:"Salam! 🌍 Main Olympia Travel ka Visa Assistant hoon.\n\nKisi bhi country ka visa, documents, fees ke baare mein puchein!"}]);
   var [input,setInput]=useState("");
   var [botLoading,setBotLoading]=useState(false);
+  var [docType,setDocType]=useState("cover");
+  var [docInfo,setDocInfo]=useState({clientName:"",passport:"",destination:"",purpose:"Tourism",duration:"7 days",travelDate:""});
+  var [generatedDoc,setGeneratedDoc]=useState("");
+  var [docLoading,setDocLoading]=useState(false);
   var msgsRef=useRef(null);
 
   useEffect(function(){
@@ -1642,10 +1646,19 @@ function VisaAgentTab(props){
                   <option value="ticket">✈️ Flight Ticket Confirmation</option>
                 </select>
               </div>
-              {[["clientName","Client Full Name *"],["passport","Passport Number"],["destination","Destination Country *"],["purpose","Purpose of Travel"],["duration","Duration (e.g. 7 days)"],["travelDate","Travel Date"]].map(function(f){return(
-                <div key={f[0]}>
-                  <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>{f[1]}</label>
-                  <input value={docInfo[f[0]]||""} onChange={function(e){var k=f[0];setDocInfo(function(prev){return Object.assign({},prev,{[k]:e.target.value});});}}
+              {[["clientName","Client Full Name *"],["passport","Passport Number"],["destination","Destination Country *"],["purpose","Purpose of Travel"],["duration","Duration (e.g. 7 days)"],["travelDate","Travel Date"]].map(function(fl){
+                var fkey=fl[0];
+                return(
+                <div key={fkey}>
+                  <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>{fl[1]}</label>
+                  <input value={docInfo[fkey]||""} onChange={function(ev){
+                    var val=ev.target.value;
+                    setDocInfo(function(prev){
+                      var next=Object.assign({},prev);
+                      next[fkey]=val;
+                      return next;
+                    });
+                  }}
                     style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
                 </div>
               );})}
@@ -1689,10 +1702,15 @@ function VisaAgentTab(props){
             <div style={{background:"#fff",border:"2px solid "+C.accent,borderRadius:14,padding:18,marginBottom:14}}>
               <div style={{fontWeight:800,color:C.accent,fontSize:14,marginBottom:14}}>{editItem?"✏️ Edit":"+ New Country"}</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                {[["name","Country Name *"],["flag","Flag Emoji"],["fees","Agency Fee (PKR)"],["processing","Processing Time"],["validity","Validity"],["type","Visa Type"]].map(function(f){return(
-                  <div key={f[0]}>
-                    <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>{f[1]}</label>
-                    <input value={form[f[0]]||""} onChange={function(e){var k=f[0];setForm(function(prev){return Object.assign({},prev,{[k]:e.target.value});});}}
+                {[["name","Country Name *"],["flag","Flag Emoji"],["fees","Agency Fee (PKR)"],["processing","Processing Time"],["validity","Validity"],["type","Visa Type"]].map(function(fl){
+                  var fkey=fl[0];
+                  return(
+                  <div key={fkey}>
+                    <label style={{display:"block",fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>{fl[1]}</label>
+                    <input value={form[fkey]||""} onChange={function(ev){
+                      var val=ev.target.value;
+                      setForm(function(prev){var next=Object.assign({},prev);next[fkey]=val;return next;});
+                    }}
                       style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"8px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
                   </div>
                 );})}
