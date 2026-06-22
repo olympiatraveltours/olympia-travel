@@ -2269,51 +2269,40 @@ function EntryForm(efp){
 // person: {id, name, phone, entries:[{id,date,type,amount,paidBack,purpose,notes,status}]}
 
 function UdharForm(fp){
-  // fp.entry = existing entry (for edit) or null (for new)
-  // fp.onSave(entry), fp.onCancel()
+  // fp.entry = existing tx (edit) or null (new). Tx shape: {id,date,dir:"out"|"in",amount,purpose,notes}
   var init=fp.entry?Object.assign({},fp.entry):{
     date:new Date().toISOString().split("T")[0],
-    type:"Diya",amount:"",paidBack:"",purpose:"",notes:"",status:"Pending"
+    dir:"out",amount:"",purpose:"",notes:""
   };
   var [f,setF]=useState(init);
   var upd=function(k,v){setF(function(prev){return Object.assign({},prev,{[k]:v});});};
+  var isOut=f.dir==="out";
+  var col=isOut?"#dc2626":"#16a34a";
   return(
     <div style={{background:"#fff",border:"2px solid "+C.accent,borderRadius:12,padding:16,marginBottom:12}}>
       <div style={{fontWeight:800,color:C.accent,fontSize:14,marginBottom:10}}>
         {fp.entry?"✏️ Entry Edit":"+ Nai Entry"}
       </div>
       <div style={{display:"flex",marginBottom:10,border:"1.5px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
-        <button onClick={function(){upd("type","Diya");}}
-          style={{flex:1,padding:"10px 0",border:"none",background:f.type==="Diya"?"#dc2626":"#fff",color:f.type==="Diya"?"#fff":"#6b7280",fontWeight:800,cursor:"pointer",fontSize:13}}>
-          💸 Receivable
+        <button onClick={function(){upd("dir","out");}}
+          style={{flex:1,padding:"10px 0",border:"none",background:isOut?"#dc2626":"#fff",color:isOut?"#fff":"#6b7280",fontWeight:800,cursor:"pointer",fontSize:13}}>
+          💸 Diya (paisa diya)
         </button>
-        <button onClick={function(){upd("type","Liya");}}
-          style={{flex:1,padding:"10px 0",border:"none",background:f.type==="Liya"?"#16a34a":"#fff",color:f.type==="Liya"?"#fff":"#6b7280",fontWeight:800,cursor:"pointer",fontSize:13}}>
-          💰 Payable
+        <button onClick={function(){upd("dir","in");}}
+          style={{flex:1,padding:"10px 0",border:"none",background:!isOut?"#16a34a":"#fff",color:!isOut?"#fff":"#6b7280",fontWeight:800,cursor:"pointer",fontSize:13}}>
+          💰 Wapas Aaya (paisa mila)
         </button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
         <div>
           <div style={{fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Amount (PKR)</div>
-          <input value={f.amount} onChange={function(e){upd("amount",e.target.value);}} type="number" placeholder="0"
-            style={{width:"100%",background:"#f0fdf4",border:"2px solid "+C.accent,borderRadius:7,padding:"9px",fontSize:15,outline:"none",fontWeight:800,boxSizing:"border-box",color:f.type==="Diya"?"#dc2626":"#16a34a"}}/>
+          <input value={f.amount} onChange={function(e){upd("amount",e.target.value);}} type="number" placeholder="0" autoFocus
+            style={{width:"100%",background:"#f9fafb",border:"2px solid "+col,borderRadius:7,padding:"9px",fontSize:15,outline:"none",fontWeight:800,boxSizing:"border-box",color:col}}/>
         </div>
         <div>
           <div style={{fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Date</div>
           <input value={f.date} onChange={function(e){upd("date",e.target.value);}} type="date"
             style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"9px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
-        </div>
-        <div>
-          <div style={{fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Amount Paid Back</div>
-          <input value={f.paidBack||""} onChange={function(e){upd("paidBack",e.target.value);}} type="number" placeholder="0"
-            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"9px",fontSize:12,outline:"none",boxSizing:"border-box"}}/>
-        </div>
-        <div>
-          <div style={{fontSize:9,fontWeight:700,color:C.accent,textTransform:"uppercase",marginBottom:3}}>Status</div>
-          <select value={f.status} onChange={function(e){upd("status",e.target.value);}}
-            style={{width:"100%",background:C.accentSoft,border:"1.5px solid "+C.border,borderRadius:7,padding:"9px",fontSize:12,outline:"none",boxSizing:"border-box"}}>
-            <option>Pending</option><option>Partial</option><option>Settled</option>
-          </select>
         </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
@@ -2324,13 +2313,13 @@ function UdharForm(fp){
       </div>
       <div style={{display:"flex",gap:8}}>
         <button onClick={function(){
-          if(!f.amount){alert("Amount likho!");return;}
+          if(!f.amount||Number(f.amount)<=0){alert("Amount likho!");return;}
           fp.onSave(Object.assign({},f,{
             id:f.id||uid("UE"),
-            amount:Number(f.amount||0),
-            paidBack:Number(f.paidBack||0)
+            dir:f.dir,
+            amount:Number(f.amount||0)
           }));
-        }} style={{flex:2,background:f.type==="Diya"?"#dc2626":"#16a34a",color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
+        }} style={{flex:2,background:col,color:"#fff",border:"none",borderRadius:8,padding:"11px 0",fontWeight:800,cursor:"pointer",fontSize:14}}>
           💾 Save
         </button>
         <button onClick={fp.onCancel}
@@ -2342,36 +2331,56 @@ function UdharForm(fp){
   );
 }
 
+// Normalize entries to running-ledger shape {id,date,dir,amount,purpose,notes}
+// Converts old {type:"Diya"/"Liya",amount,paidBack} data automatically.
+function normUdharEntries(entries){
+  if(!Array.isArray(entries)) return [];
+  var out=[];
+  entries.forEach(function(e){
+    if(e.dir==="out"||e.dir==="in"){
+      out.push({id:e.id||uid("UE"),date:e.date,dir:e.dir,amount:Number(e.amount||0),purpose:e.purpose||"",notes:e.notes||""});
+      return;
+    }
+    var amt=Number(e.amount||0), pb=Number(e.paidBack||0);
+    if(e.type==="Liya"){
+      // I borrowed from them => money came in to me
+      out.push({id:e.id||uid("UE"),date:e.date,dir:"in",amount:amt,purpose:e.purpose||"",notes:e.notes||""});
+      if(pb>0) out.push({id:uid("UE"),date:e.date,dir:"out",amount:pb,purpose:"Wapas kiya",notes:""});
+    } else {
+      // Diya (or legacy) => I gave them, money went out
+      out.push({id:e.id||uid("UE"),date:e.date,dir:"out",amount:amt,purpose:e.purpose||"",notes:e.notes||""});
+      if(pb>0) out.push({id:uid("UE"),date:e.date,dir:"in",amount:pb,purpose:"Wapas aaya",notes:""});
+    }
+  });
+  return out;
+}
+// Net balance from MY perspective: + => they owe me (lena), - => I owe them (dena)
+function udharNet(p){
+  return (p.entries||[]).reduce(function(s,e){return s+(e.dir==="in"?-1:1)*Number(e.amount||0);},0);
+}
+
 function UdharTab(props){
   var udhar=Array.isArray(props.udhar)?props.udhar:[];
   var setUdhar=props.setUdhar;
 
-  // STATE - simple and clear
   var [persons,setPersons]=useState(function(){
-    if(udhar.length>0&&Array.isArray(udhar[0].entries)){
-      // Fix duplicate IDs - give each person unique ID
+    if(udhar.length>0){
       var seen={};
       var fixed=udhar.map(function(p,i){
         var id=p.id||("UP"+i);
         if(seen[id]){id="UP"+Date.now()+"_"+i;}
         seen[id]=true;
-        return Object.assign({},p,{id:id});
+        return Object.assign({},p,{id:id,entries:normUdharEntries(p.entries)});
       });
-      // Check if any were fixed
-      var needsFix=fixed.some(function(p,i){return p.id!==udhar[i].id;});
-      if(needsFix){
-        // Save fixed data after render
-        setTimeout(function(){
-          setUdhar(fixed);
-        },500);
-      }
+      var changed=JSON.stringify(fixed)!==JSON.stringify(udhar);
+      if(changed){ setTimeout(function(){ setUdhar(fixed); },500); }
       return fixed;
     }
     return [];
   });
   var [selPersonId,setSelPersonId]=useState(null);
-  var [showForm,setShowForm]=useState(false);     // show entry form
-  var [editingEntry,setEditingEntry]=useState(null); // entry being edited
+  var [showForm,setShowForm]=useState(false);
+  var [editingEntry,setEditingEntry]=useState(null);
   var [showAddPerson,setShowAddPerson]=useState(false);
   var [newName,setNewName]=useState("");
   var [newPhone,setNewPhone]=useState("");
@@ -2379,109 +2388,81 @@ function UdharTab(props){
   var [editName,setEditName]=useState("");
   var [editPhone,setEditPhone]=useState("");
 
-  // Sync persons to Firebase whenever it changes
-  function savePersons(updated){
-    setPersons(updated);
-    setUdhar(updated);
-  }
-
-  // Selected person object
+  function savePersons(updated){ setPersons(updated); setUdhar(updated); }
   var selPerson=persons.find(function(p){return p.id===selPersonId;})||null;
 
-  // Handle add/find person
   function handleAddPerson(){
     if(!newName.trim()){alert("Naam likho!");return;}
-    var found=persons.find(function(p){
-      return p.name.toLowerCase().trim()===newName.toLowerCase().trim();
-    });
+    var found=persons.find(function(p){return p.name.toLowerCase().trim()===newName.toLowerCase().trim();});
     if(found){
-      // Existing person - open their profile and show entry form
-      setSelPersonId(found.id);
-      setShowForm(true);
-      setEditingEntry(null);
+      setSelPersonId(found.id); setShowForm(true); setEditingEntry(null);
     } else {
-      // New person
       var np={id:uid("UP"),name:newName.trim(),phone:newPhone.trim(),entries:[]};
-      var updated=persons.concat([np]);
-      savePersons(updated);
-      setSelPersonId(np.id);
-      setShowForm(true);
-      setEditingEntry(null);
+      savePersons(persons.concat([np]));
+      setSelPersonId(np.id); setShowForm(true); setEditingEntry(null);
     }
-    setShowAddPerson(false);
-    setNewName("");
-    setNewPhone("");
+    setShowAddPerson(false); setNewName(""); setNewPhone("");
   }
 
-  // Save entry (new or edit)
   function handleSaveEntry(entry){
     var updated=persons.map(function(p){
       if(p.id!==selPersonId) return p;
-      var newEntries=editingEntry
+      var ne=editingEntry
         ? p.entries.map(function(e){return e.id===entry.id?entry:e;})
         : p.entries.concat([entry]);
-      return Object.assign({},p,{entries:newEntries});
+      return Object.assign({},p,{entries:ne});
     });
-    savePersons(updated);
-    setShowForm(false);
-    setEditingEntry(null);
+    savePersons(updated); setShowForm(false); setEditingEntry(null);
   }
 
-  // Mark wapas
-  function handleWapas(personId,entryId){
+  // One-click full settle: add a balancing transaction so net becomes 0
+  function handleSettleAll(person){
+    var net=udharNet(person);
+    if(net===0){alert("Pehle se clear hai!");return;}
+    if(!window.confirm("Poora hisaab settle (clear) kar dein? Ek balancing entry add hogi.")) return;
+    var tx={id:uid("UE"),date:new Date().toISOString().split("T")[0],
+      dir:net>0?"in":"out",amount:Math.abs(net),
+      purpose:"Poora settle",notes:""};
     var updated=persons.map(function(p){
-      if(p.id!==personId) return p;
-      return Object.assign({},p,{entries:p.entries.map(function(e){
-        return e.id===entryId?Object.assign({},e,{status:"Settled",paidBack:e.amount}):e;
-      })});
+      return p.id===person.id?Object.assign({},p,{entries:p.entries.concat([tx])}):p;
     });
     savePersons(updated);
   }
 
-  // Delete entry
   function handleDelEntry(personId,entryId){
     if(!window.confirm("Entry delete karna chahte ho?")) return;
-    var updated=persons.map(function(p){
-      if(p.id!==personId) return p;
-      return Object.assign({},p,{entries:p.entries.filter(function(e){return e.id!==entryId;})});
-    });
-    savePersons(updated);
+    savePersons(persons.map(function(p){
+      return p.id!==personId?p:Object.assign({},p,{entries:p.entries.filter(function(e){return e.id!==entryId;})});
+    }));
   }
-
-  // Delete person
   function handleDelPerson(personId){
     if(!window.confirm("Is bande ka all data delete hoga. Sure?")) return;
     savePersons(persons.filter(function(p){return p.id!==personId;}));
-    setSelPersonId(null);
-    setShowForm(false);
+    setSelPersonId(null); setShowForm(false);
   }
-
-  // Save profile edit
   function handleSaveProfile(){
-    var updated=persons.map(function(p){
+    savePersons(persons.map(function(p){
       return p.id===selPersonId?Object.assign({},p,{name:editName,phone:editPhone}):p;
-    });
-    savePersons(updated);
+    }));
     setShowEditProfile(false);
   }
 
-  // Print person hisaab
+  // Print hisaab — running ledger
   function printHisaab(p){
     var entries=p.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-    var tD=entries.filter(function(e){return e.type==="Diya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
-    var tL=entries.filter(function(e){return e.type==="Liya";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
-    var tW=entries.reduce(function(s,e){return s+Number(e.paidBack||0);},0);
-    var net=tD-tL-tW;
+    var tOut=entries.filter(function(e){return e.dir!=="in";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+    var tIn=entries.filter(function(e){return e.dir==="in";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+    var net=tOut-tIn;
+    var run=0;
     var rows=entries.map(function(e,i){
-      var bal=Number(e.amount||0)-Number(e.paidBack||0);
+      run+=(e.dir==="in"?-1:1)*Number(e.amount||0);
+      var isOut=e.dir!=="in";
       return "<tr style='background:"+(i%2===0?"#fff":"#f9fafb")+"'>"
         +"<td style='padding:7px 8px'>"+e.date+"</td>"
-        +"<td style='padding:7px 8px;font-weight:700;color:"+(e.type==="Diya"?"#dc2626":"#16a34a")+"'>"+(e.type==="Diya"?"💸 Receivable":"💰 Payable")+"</td>"
-        +"<td style='padding:7px 8px;font-weight:700'>"+pkr(Number(e.amount||0))+"</td>"
-        +"<td style='padding:7px 8px;color:#16a34a'>"+(Number(e.paidBack||0)>0?pkr(Number(e.paidBack||0)):"--")+"</td>"
-        +"<td style='padding:7px 8px;font-weight:700;color:"+(bal>0?"#dc2626":"#16a34a")+"'>"+pkr(bal)+"</td>"
+        +"<td style='padding:7px 8px;font-weight:700;color:"+(isOut?"#dc2626":"#16a34a")+"'>"+(isOut?"💸 Diya":"💰 Wapas Aaya")+"</td>"
+        +"<td style='padding:7px 8px;font-weight:700;color:"+(isOut?"#dc2626":"#16a34a")+"'>"+(isOut?"+":"−")+pkr(Number(e.amount||0))+"</td>"
+        +"<td style='padding:7px 8px;font-weight:800;color:"+(run>0?"#dc2626":run<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(run))+"</td>"
         +"<td style='padding:7px 8px;color:#6b7280;font-size:11px'>"+(e.purpose||"--")+"</td>"
-        +"<td style='padding:7px 8px'><span style='background:"+(e.status==="Settled"?"#dcfce7":e.status==="Partial"?"#fef9c3":"#fee2e2")+";padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700'>"+e.status+"</span></td>"
         +"</tr>";
     }).join("");
     var w=window.open("","_blank");
@@ -2503,14 +2484,14 @@ function UdharTab(props){
       +"<div class='hdr'><div class='title'>Hisaab — "+p.name+"</div>"
       +"<div class='sub'>"+(p.phone?"📞 "+p.phone+" | ":"")+entries.length+" entries | "+new Date().toLocaleDateString("en-PK")+"</div></div>"
       +"<div class='cards'>"
-      +"<div class='card' style='background:#fff5f5'><div class='cl'>Maine Diya</div><div class='cv' style='color:#dc2626'>"+pkr(tD)+"</div></div>"
-      +"<div class='card' style='background:#f0fdf4'><div class='cl'>Maine Liya</div><div class='cv' style='color:#16a34a'>"+pkr(tL)+"</div></div>"
-      +"<div class='card' style='background:#f0fdf4'><div class='cl'>Settled</div><div class='cv' style='color:#16a34a'>"+pkr(tW)+"</div></div>"
+      +"<div class='card' style='background:#fff5f5'><div class='cl'>Total Diya</div><div class='cv' style='color:#dc2626'>"+pkr(tOut)+"</div></div>"
+      +"<div class='card' style='background:#f0fdf4'><div class='cl'>Wapas Aaya</div><div class='cv' style='color:#16a34a'>"+pkr(tIn)+"</div></div>"
+      +"<div class='card' style='background:"+(net>0?"#fff5f5":net<0?"#f0fdf4":"#f9fafb")+"'><div class='cl'>"+(net>0?"Baqi (Lena)":net<0?"Baqi (Dena)":"Baqi")+"</div><div class='cv' style='color:"+(net>0?"#dc2626":net<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(net))+"</div></div>"
       +"</div>"
-      +"<table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Settled</th><th>Baqi</th><th>Wajah</th><th>Status</th></tr></thead>"
+      +"<table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Running Baqi</th><th>Wajah</th></tr></thead>"
       +"<tbody>"+rows+"</tbody></table>"
       +"<div class='net' style='background:"+(net>0?"#fee2e2":net<0?"#dcfce7":"#f3f4f6")+";border:1.5px solid "+(net>0?"#fecaca":net<0?"#bbf7d0":"#e5e7eb")+"'>"
-      +"<div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(net>0?"Total Receivable":net<0?"Total Payable":"Clear!")+"</div>"
+      +"<div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(net>0?"In se lena hai":net<0?"In ko dena hai":"Hisaab clear hai")+"</div>"
       +"<div style='font-size:24px;font-weight:900;color:"+(net>0?"#dc2626":net<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(net))+"</div></div>"
       +"<div class='pay'>💳 <b>Payment Details:</b><br>JazzCash / EasyPaisa / SadaPay / NayaPay: <b>03312351419</b> (Dawood Shoukat)<br>Bank Alfalah — A/C: 55875002428885 | IBAN: PK84ALFH5587005002428885 (M/S Olympia Travel & Tours)</div>"
       +"<div class='foot'>Olympia Travel & Tours | Printed: "+new Date().toLocaleString("en-PK")+"</div>"
@@ -2519,52 +2500,40 @@ function UdharTab(props){
     setTimeout(function(){w.print();},500);
   }
 
-  // Summary totals
-  var totalWapasLena=persons.reduce(function(s,p){
-    return s+p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Settled";})
-      .reduce(function(s2,e){return s2+Number(e.amount||0)-Number(e.paidBack||0);},0);
-  },0);
-  var totalWapasDena=persons.reduce(function(s,p){
-    return s+p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Settled";})
-      .reduce(function(s2,e){return s2+Number(e.amount||0)-Number(e.paidBack||0);},0);
-  },0);
+  // Combined totals
+  var totalLena=persons.reduce(function(s,p){var n=udharNet(p);return s+(n>0?n:0);},0);
+  var totalDena=persons.reduce(function(s,p){var n=udharNet(p);return s+(n<0?-n:0);},0);
+  var activePersons=persons.filter(function(p){return udharNet(p)!==0;});
 
   return(
     <div>
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-        <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Udhar / Loans 💰</h2>
+        <h2 style={{margin:0,fontSize:16,fontWeight:800,color:C.accent}}>Udhar / Lena-Dena 💰</h2>
         <button onClick={function(){setShowAddPerson(!showAddPerson);setNewName("");setNewPhone("");}}
           style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontWeight:800,cursor:"pointer",fontSize:13}}>
           + Person
         </button>
       </div>
 
-      {/* Add/Find Person Form */}
+      {/* Add/Find Person */}
       {showAddPerson&&(
         <div style={{background:C.accentSoft,border:"2px solid "+C.accent,borderRadius:12,padding:14,marginBottom:14}}>
           <div style={{fontWeight:700,color:C.accent,fontSize:13,marginBottom:8}}>
-            Enter name — existing person will auto-merge, new name creates new profile
+            Naam likho — purana naam mil jaye to wahi profile khulegi, naya naam nayi profile banayega
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",position:"relative"}}>
             <div style={{flex:2,minWidth:150,position:"relative"}}>
               <input value={newName} onChange={function(e){setNewName(e.target.value);}}
-                onKeyDown={function(e){
-                  if(e.key==="Enter") handleAddPerson();
-                  if(e.key==="Escape") setNewName("");
-                }}
+                onKeyDown={function(e){if(e.key==="Enter")handleAddPerson();if(e.key==="Escape")setNewName("");}}
                 placeholder="Type name..." autoFocus
                 style={{width:"100%",background:"#fff",border:"1.5px solid "+C.accent,borderRadius:8,padding:"9px 11px",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
               {newName.trim().length>0&&(function(){
-                var matches=persons.filter(function(p){
-                  return p.name.toLowerCase().includes(newName.toLowerCase().trim());
-                });
+                var matches=persons.filter(function(p){return p.name.toLowerCase().includes(newName.toLowerCase().trim());});
                 if(matches.length===0) return null;
                 return(
                   <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid "+C.accent,borderRadius:8,boxShadow:"0 4px 12px rgba(0,0,0,.15)",zIndex:999,marginTop:2}}>
                     {matches.map(function(p){
-                      var bal=p.entries.filter(function(e){return e.status!=="Settled";})
-                        .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
                       return(
                         <div key={p.id} onClick={function(){setNewName(p.name);}}
                           style={{padding:"10px 12px",cursor:"pointer",borderBottom:"1px solid #f3f4f6",display:"flex",justifyContent:"space-between",alignItems:"center"}}
@@ -2582,69 +2551,49 @@ function UdharTab(props){
                 );
               }())}
             </div>
-            <input value={newPhone} onChange={function(e){setNewPhone(e.target.value);}}
-              placeholder="Phone (optional)"
+            <input value={newPhone} onChange={function(e){setNewPhone(e.target.value);}} placeholder="Phone (optional)"
               style={{flex:1,minWidth:120,background:"#fff",border:"1.5px solid "+C.border,borderRadius:8,padding:"9px 11px",fontSize:12,outline:"none"}}/>
             <button onClick={handleAddPerson}
-              style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>
-              → Go
-            </button>
+              style={{background:C.accent,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontWeight:800,cursor:"pointer",fontSize:13}}>→ Go</button>
             <button onClick={function(){setShowAddPerson(false);setNewName("");}}
-              style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#6b7280",borderRadius:8,padding:"9px 12px",fontWeight:700,cursor:"pointer"}}>
-              ✕
-            </button>
+              style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#6b7280",borderRadius:8,padding:"9px 12px",fontWeight:700,cursor:"pointer"}}>✕</button>
           </div>
         </div>
       )}
 
-      {/* Summary - Separated clearly */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-        {/* Wapas Lena */}
-        <div style={{background:"#fff5f5",border:"2px solid #fecaca",borderRadius:12,padding:14}}>
-          <div style={{color:"#dc2626",fontWeight:800,fontSize:12,marginBottom:10}}>💸 Receivable (Receivable)</div>
-          {persons.map(function(p){
-            var bal=p.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Settled";})
-              .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
-            if(bal<=0) return null;
-            return(
-              <div key={p.id} onClick={function(pid){return function(){setSelPersonId(pid);setShowForm(false);setShowEditProfile(false);};}(p.id)}
-                style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #fecaca",cursor:"pointer"}}>
-                <span style={{fontWeight:700,fontSize:12,color:"#1f2937"}}>{p.name}</span>
-                <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                  <span style={{color:"#dc2626",fontWeight:800,fontSize:13}}>{pkr(bal)}</span>
-                  <button onClick={function(ev){ev.stopPropagation();printHisaab(p);}}
-                    style={{background:"#dc2626",color:"#fff",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
-                </div>
-              </div>
-            );
-          })}
-          <div style={{marginTop:8,display:"flex",justifyContent:"space-between",fontWeight:900,color:"#dc2626",fontSize:14,paddingTop:6,borderTop:"1px solid #fecaca"}}>
-            <span>Total</span><span>{pkr(totalWapasLena)}</span>
+      {/* Combined Summary — sab ek sath, red/green */}
+      <div style={{background:"#fff",border:"2px solid "+C.border,borderRadius:12,padding:14,marginBottom:16}}>
+        <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:130,background:"#fff5f5",border:"1.5px solid #fecaca",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",color:"#dc2626",marginBottom:3}}>Total Lena (mujhe milna)</div>
+            <div style={{fontSize:18,fontWeight:900,color:"#dc2626"}}>{pkr(totalLena)}</div>
+          </div>
+          <div style={{flex:1,minWidth:130,background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,padding:"10px 12px",textAlign:"center"}}>
+            <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",color:"#16a34a",marginBottom:3}}>Total Dena (mujhe dena)</div>
+            <div style={{fontSize:18,fontWeight:900,color:"#16a34a"}}>{pkr(totalDena)}</div>
           </div>
         </div>
-        {/* Wapas Dena */}
-        <div style={{background:"#f0fdf4",border:"2px solid #bbf7d0",borderRadius:12,padding:14}}>
-          <div style={{color:"#16a34a",fontWeight:800,fontSize:12,marginBottom:10}}>💰 Payable (Payable)</div>
-          {persons.map(function(p){
-            var bal=p.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Settled";})
-              .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
-            if(bal<=0) return null;
-            return(
-              <div key={p.id} onClick={function(pid){return function(){setSelPersonId(pid);setShowForm(false);setShowEditProfile(false);};}(p.id)}
-                style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #bbf7d0",cursor:"pointer"}}>
-                <span style={{fontWeight:700,fontSize:12,color:"#1f2937"}}>{p.name}</span>
-                <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                  <span style={{color:"#16a34a",fontWeight:800,fontSize:13}}>{pkr(bal)}</span>
-                  <button onClick={function(ev){ev.stopPropagation();printHisaab(p);}}
-                    style={{background:"#16a34a",color:"#fff",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
+        {activePersons.length===0
+          ? <div style={{textAlign:"center",color:C.muted,fontSize:12,padding:"6px 0"}}>Sab hisaab clear hain ✓</div>
+          : activePersons.map(function(p){
+              var n=udharNet(p);
+              var lena=n>0;
+              return(
+                <div key={p.id} onClick={function(pid){return function(){setSelPersonId(pid);setShowForm(false);setShowEditProfile(false);};}(p.id)}
+                  style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f3f4f6",cursor:"pointer"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{width:9,height:9,borderRadius:"50%",background:lena?"#dc2626":"#16a34a",display:"inline-block"}}></span>
+                    <span style={{fontWeight:700,fontSize:13,color:"#1f2937"}}>{p.name}</span>
+                    <span style={{fontSize:10,color:C.muted}}>{lena?"lena hai":"dena hai"}</span>
+                  </div>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <span style={{color:lena?"#dc2626":"#16a34a",fontWeight:800,fontSize:14}}>{pkr(Math.abs(n))}</span>
+                    <button onClick={function(ev){ev.stopPropagation();printHisaab(p);}}
+                      style={{background:lena?"#dc2626":"#16a34a",color:"#fff",border:"none",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:10,fontWeight:700}}>🖨️</button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          <div style={{marginTop:8,display:"flex",justifyContent:"space-between",fontWeight:900,color:"#16a34a",fontSize:14,paddingTop:6,borderTop:"1px solid #bbf7d0"}}>
-            <span>Total</span><span>{pkr(totalWapasDena)}</span>
-          </div>
-        </div>
+              );
+            })}
       </div>
 
       {/* Persons Grid */}
@@ -2652,24 +2601,20 @@ function UdharTab(props){
         {persons.map(function(person){
           var pId=person.id;
           var isSel=selPersonId===pId;
-          var bDiya=person.entries.filter(function(e){return e.type==="Diya"&&e.status!=="Settled";})
-            .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
-          var bLiya=person.entries.filter(function(e){return e.type==="Liya"&&e.status!=="Settled";})
-            .reduce(function(s,e){return s+Number(e.amount||0)-Number(e.paidBack||0);},0);
+          var n=udharNet(person);
           return(
             <div key={pId}
               onClick={function(pid){return function(){
                 setSelPersonId(function(prev){return prev===pid?null:pid;});
-                setShowForm(false);
-                setShowEditProfile(false);
-                setEditingEntry(null);
+                setShowForm(false); setShowEditProfile(false); setEditingEntry(null);
               };}(pId)}
               style={{background:isSel?"#f0fdf4":"#fff",border:"2px solid "+(isSel?"#16a34a":C.border),borderRadius:10,padding:12,cursor:"pointer",transition:"all .15s"}}>
               <div style={{fontWeight:800,fontSize:13,color:"#1f2937",marginBottom:2}}>{person.name}</div>
               {person.phone&&<div style={{color:C.muted,fontSize:10,marginBottom:3}}>📞 {person.phone}</div>}
               <div style={{color:C.muted,fontSize:10,marginBottom:4}}>{person.entries.length} entries</div>
-              {bDiya>0&&<div style={{color:"#dc2626",fontWeight:700,fontSize:11}}>↑ {pkr(bDiya)}</div>}
-              {bLiya>0&&<div style={{color:"#16a34a",fontWeight:700,fontSize:11}}>↓ {pkr(bLiya)}</div>}
+              {n>0&&<div style={{color:"#dc2626",fontWeight:800,fontSize:12}}>Lena: {pkr(n)}</div>}
+              {n<0&&<div style={{color:"#16a34a",fontWeight:800,fontSize:12}}>Dena: {pkr(-n)}</div>}
+              {n===0&&<div style={{color:"#16a34a",fontWeight:700,fontSize:11}}>✓ Clear</div>}
             </div>
           );
         })}
@@ -2681,7 +2626,14 @@ function UdharTab(props){
       </div>
 
       {/* Selected Person Panel */}
-      {selPerson&&(
+      {selPerson&&(function(){
+        var net=udharNet(selPerson);
+        var tOut=selPerson.entries.filter(function(e){return e.dir!=="in";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+        var tIn=selPerson.entries.filter(function(e){return e.dir==="in";}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+        var sorted=selPerson.entries.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date)||(a.id>b.id?1:-1);});
+        var run=0;
+        var rowsData=sorted.map(function(e){run+=(e.dir==="in"?-1:1)*Number(e.amount||0);return {e:e,run:run};});
+        return(
         <div style={{background:"#fff",border:"2px solid "+C.accent,borderRadius:14,padding:18,boxShadow:"0 4px 20px rgba(0,0,0,.08)"}}>
           {/* Person Header */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14,flexWrap:"wrap",gap:8}}>
@@ -2695,18 +2647,36 @@ function UdharTab(props){
                 style={{background:showForm?"#fde68a":C.gold,color:"#fff",border:"none",borderRadius:8,padding:"7px 14px",fontWeight:800,cursor:"pointer",fontSize:12}}>
                 {showForm?"✕ Cancel":"+ Entry"}
               </button>
+              {net!==0&&(
+                <button onClick={function(){handleSettleAll(selPerson);}}
+                  style={{background:"#f0fdf4",border:"1px solid #bbf7d0",color:"#16a34a",borderRadius:8,padding:"7px 12px",fontWeight:700,cursor:"pointer",fontSize:12}}>
+                  ✅ Settle
+                </button>
+              )}
               <button onClick={function(){setShowEditProfile(!showEditProfile);setEditName(selPerson.name);setEditPhone(selPerson.phone||"");setShowForm(false);}}
-                style={{background:"#eff6ff",border:"1px solid #bfdbfe",color:"#1d4ed8",borderRadius:8,padding:"7px 12px",fontWeight:700,cursor:"pointer",fontSize:12}}>
-                ✏️ Edit
-              </button>
+                style={{background:"#eff6ff",border:"1px solid #bfdbfe",color:"#1d4ed8",borderRadius:8,padding:"7px 12px",fontWeight:700,cursor:"pointer",fontSize:12}}>✏️ Edit</button>
               <button onClick={function(){printHisaab(selPerson);}}
-                style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#374151",borderRadius:8,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>
-                🖨️ Print
-              </button>
+                style={{background:"#f3f4f6",border:"1px solid "+C.border,color:"#374151",borderRadius:8,padding:"7px 12px",cursor:"pointer",fontSize:12,fontWeight:700}}>🖨️ Print</button>
               <button onClick={function(){setSelPersonId(null);setShowForm(false);setShowEditProfile(false);}}
-                style={{background:"#fee2e2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:8,padding:"7px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>
-                ✕
-              </button>
+                style={{background:"#fee2e2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:8,padding:"7px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>✕</button>
+            </div>
+          </div>
+
+          {/* Running summary: Diya - Wapas Aaya = Baqi */}
+          <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:90,background:"#fff5f5",border:"1.5px solid #fecaca",borderRadius:10,padding:"10px",textAlign:"center"}}>
+              <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",color:"#dc2626",marginBottom:3}}>Total Diya</div>
+              <div style={{fontSize:16,fontWeight:900,color:"#dc2626"}}>{pkr(tOut)}</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",fontSize:20,fontWeight:900,color:C.muted}}>−</div>
+            <div style={{flex:1,minWidth:90,background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,padding:"10px",textAlign:"center"}}>
+              <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",color:"#16a34a",marginBottom:3}}>Wapas Aaya</div>
+              <div style={{fontSize:16,fontWeight:900,color:"#16a34a"}}>{pkr(tIn)}</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",fontSize:20,fontWeight:900,color:C.muted}}>=</div>
+            <div style={{flex:1,minWidth:90,background:net>0?"#fee2e2":net<0?"#dcfce7":"#f3f4f6",border:"1.5px solid "+(net>0?"#fecaca":net<0?"#bbf7d0":"#e5e7eb"),borderRadius:10,padding:"10px",textAlign:"center"}}>
+              <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",color:net>0?"#dc2626":net<0?"#16a34a":"#6b7280",marginBottom:3}}>{net>0?"Baqi (Lena)":net<0?"Baqi (Dena)":"Clear"}</div>
+              <div style={{fontSize:16,fontWeight:900,color:net>0?"#dc2626":net<0?"#16a34a":"#6b7280"}}>{pkr(Math.abs(net))}</div>
             </div>
           </div>
 
@@ -2726,61 +2696,39 @@ function UdharTab(props){
 
           {/* Entry Form */}
           {showForm&&(
-            <UdharForm
-              entry={editingEntry}
-              onSave={handleSaveEntry}
-              onCancel={function(){setShowForm(false);setEditingEntry(null);}}
-            />
+            <UdharForm entry={editingEntry} onSave={handleSaveEntry}
+              onCancel={function(){setShowForm(false);setEditingEntry(null);}}/>
           )}
 
-          {/* Entries List */}
+          {/* Ledger (chronological with running baqi) */}
           <div>
             {selPerson.entries.length===0&&!showForm&&(
-              <div style={{textAlign:"center",padding:"20px",color:C.muted,fontSize:13}}>
-                No entries yet — click "+ Entry"
-              </div>
+              <div style={{textAlign:"center",padding:"20px",color:C.muted,fontSize:13}}>No entries yet — click "+ Entry"</div>
             )}
-            {selPerson.entries.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(entry){
-              var eId=entry.id;
-              var bal=Number(entry.amount||0)-Number(entry.paidBack||0);
-              var isDiya=entry.type==="Diya";
+            {rowsData.slice().reverse().map(function(rd){
+              var entry=rd.e; var eId=entry.id; var isOut=entry.dir!=="in"; var run=rd.run;
               return(
-                <div key={eId} style={{background:entry.status==="Settled"?"#f0fdf4":"#fff",border:"1.5px solid "+(isDiya?"#fecaca":"#bbf7d0"),borderRadius:10,padding:"12px 14px",marginBottom:8,opacity:entry.status==="Settled"?0.65:1}}>
+                <div key={eId} style={{background:"#fff",border:"1.5px solid "+(isOut?"#fecaca":"#bbf7d0"),borderRadius:10,padding:"12px 14px",marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                     <div>
-                      <span style={{background:isDiya?"#fee2e2":"#dcfce7",color:isDiya?"#dc2626":"#16a34a",padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,marginRight:6}}>
-                        {isDiya?"💸 Receivable":"💰 Payable"}
-                      </span>
-                      <span style={{background:entry.status==="Settled"?"#dcfce7":entry.status==="Partial"?"#fef9c3":"#fee2e2",color:entry.status==="Settled"?"#16a34a":entry.status==="Partial"?"#a16207":"#dc2626",padding:"3px 8px",borderRadius:20,fontSize:9,fontWeight:700}}>
-                        {entry.status}
+                      <span style={{background:isOut?"#fee2e2":"#dcfce7",color:isOut?"#dc2626":"#16a34a",padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:800,marginRight:6}}>
+                        {isOut?"💸 Diya":"💰 Wapas Aaya"}
                       </span>
                       <div style={{color:"#6b7280",fontSize:11,marginTop:4}}>
-                        📅 {entry.date}
-                        {entry.purpose&&" | 📝 "+entry.purpose}
+                        📅 {entry.date}{entry.purpose&&" | 📝 "+entry.purpose}
                       </div>
                       {entry.notes&&<div style={{color:"#9ca3af",fontSize:10,marginTop:2}}>💬 {entry.notes}</div>}
                     </div>
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontWeight:900,fontSize:18,color:isDiya?"#dc2626":"#16a34a"}}>{pkr(Number(entry.amount||0))}</div>
-                      {Number(entry.paidBack||0)>0&&<div style={{color:"#16a34a",fontSize:11,marginTop:2}}>Paid Back: {pkr(Number(entry.paidBack||0))}</div>}
-                      {bal>0&&entry.status!=="Settled"&&<div style={{color:"#dc2626",fontSize:12,fontWeight:700,marginTop:2}}>Baqi: {pkr(bal)}</div>}
+                      <div style={{fontWeight:900,fontSize:18,color:isOut?"#dc2626":"#16a34a"}}>{isOut?"+":"−"}{pkr(Number(entry.amount||0))}</div>
+                      <div style={{color:run>0?"#dc2626":run<0?"#16a34a":"#6b7280",fontSize:11,fontWeight:700,marginTop:2}}>Baqi: {pkr(Math.abs(run))}</div>
                     </div>
                   </div>
                   <div style={{display:"flex",gap:6}}>
                     <button onClick={function(e){return function(){setEditingEntry(e);setShowForm(true);setShowEditProfile(false);};}(entry)}
-                      style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                      ✏️ Edit
-                    </button>
-                    {entry.status!=="Settled"&&(
-                      <button onClick={function(eid){return function(){handleWapas(selPersonId,eid);};}(eId)}
-                        style={{background:"#f0fdf4",border:"1px solid #bbf7d0",color:"#16a34a",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                        ✅ Settled
-                      </button>
-                    )}
+                      style={{background:"#fffbeb",border:"1px solid #fde68a",color:C.gold,borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>✏️ Edit</button>
                     <button onClick={function(eid){return function(){handleDelEntry(selPersonId,eid);};}(eId)}
-                      style={{background:"#fee2e2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>
-                      🗑 Del
-                    </button>
+                      style={{background:"#fee2e2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>🗑 Del</button>
                   </div>
                 </div>
               );
@@ -2793,7 +2741,8 @@ function UdharTab(props){
             🗑 Delete {selPerson.name} ka all data
           </button>
         </div>
-      )}
+        );
+      }())}
     </div>
   );
 }
