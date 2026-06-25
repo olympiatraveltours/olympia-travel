@@ -1372,9 +1372,8 @@ var VISA_DATA=[
 ];
 
 function VisaAgentTab(props){
-  var [customCountries,setCustomCountries]=useState(function(){
-    try{var s=localStorage.getItem("olympia_custom_visa");return s?JSON.parse(s):[];}catch(e){return [];}
-  });
+  // Custom visa data now comes from app-level state (Firebase-synced across devices)
+  var customCountries=Array.isArray(props.customVisa)?props.customVisa:[];
   // Custom countries override default ones with same id
   var allCountries=VISA_DATA.map(function(c){
     var override=customCountries.find(function(cc){return cc.id===c.id;});
@@ -1416,8 +1415,11 @@ function VisaAgentTab(props){
   },[msgs]);
 
   function saveCustom(updated){
-    setCustomCountries(updated);
-    try{localStorage.setItem("olympia_custom_visa",JSON.stringify(updated));}catch(e){}
+    if(props.setCustomVisa){
+      props.setCustomVisa(updated);
+    } else {
+      try{localStorage.setItem("olympia_custom_visa",JSON.stringify(updated));}catch(e){}
+    }
   }
 
   var filtered=allCountries.filter(function(c){
@@ -3495,6 +3497,7 @@ export default function App(){
   var [personal,setPersonalR]=useState(function(){return ld("olympia_personal",[]);});
   var [groups,setGroupsR]=useState(function(){var d=ld("olympia_groups",[]); return Array.isArray(d)?d:[];});
   var [udhar,setUdharR]=useState(function(){var d=ld("olympia_udhar",[]); return Array.isArray(d)?d:[];});
+  var [customVisa,setCustomVisaR]=useState(function(){var d=ld("olympia_custom_visa",[]); return Array.isArray(d)?d:[];});
   var [staffExp,setStaffExpR]=useState(function(){var d=ld("olympia_staffexp",[]); return Array.isArray(d)?d:[];});
   var [queries,setQueriesR]=useState(function(){
     var d=ld("olympia_queries",[]);
@@ -3603,6 +3606,7 @@ export default function App(){
         {fb:"olympia_queries",   setter:setQueriesR,  lk:"olympia_queries",   getter:function(){return ld("olympia_queries",[]);}},
         {fb:"olympia_groups",    setter:setGroupsR,   lk:"olympia_groups",    getter:function(){return ld("olympia_groups",[]);}},
         {fb:"olympia_udhar",     setter:setUdharR,    lk:"olympia_udhar",     getter:function(){return ld("olympia_udhar",[]);}},
+        {fb:"olympia_custom_visa",setter:setCustomVisaR, lk:"olympia_custom_visa",getter:function(){return ld("olympia_custom_visa",[]);}},
         {fb:"olympia_staffexp",  setter:setStaffExpR, lk:"olympia_staffexp",  getter:function(){return ld("olympia_staffexp",[]);}},
         {fb:"olympia_users_config",setter:function(d){if(d&&Array.isArray(d.users)&&d.users.length>0){setUsersConfigR(d);sv("olympia_users_config",d);try{localStorage.setItem("olympia_users_config_bk",JSON.stringify(d));}catch(e){}}},lk:"olympia_users_config",getter:function(){return ld("olympia_users_config",null);}},
       ];
@@ -3647,6 +3651,10 @@ export default function App(){
   function setStaffExp(d){
     var arr=Array.isArray(d)?d:[];
     setStaffExpR(arr);sv("olympia_staffexp",arr);fbSave("olympia_staffexp",arr);showToast();
+  }
+  function setCustomVisa(d){
+    var arr=Array.isArray(d)?d:[];
+    setCustomVisaR(arr);sv("olympia_custom_visa",arr);fbSave("olympia_custom_visa",arr);showToast();
   }
   function setPersonal(d){
     setPersonalR(d);
@@ -4404,7 +4412,7 @@ export default function App(){
         )}
                 {tab==="marketing"&&<Marketing packages={packages} setPackages={setP} customers={customers} showToast={showToast}/>}
         {tab==="queries"&&<QueriesTab queries={queries} setQueries={setQueries} currentUser={currentUser}/>}
-        {tab==="visaagent"&&<VisaAgentTab currentUser={currentUser}/> }
+        {tab==="visaagent"&&<VisaAgentTab currentUser={currentUser} customVisa={customVisa} setCustomVisa={setCustomVisa}/> }
         {tab==="access"&&<AccessControlTab usersConfig={usersConfig} saveUsersConfig={saveUsersConfig} sectionLabels={SECTION_LABELS} allSections={ALL_SECTION_IDS}/>}
         {tab==="groups"&&<GroupsTab groups={groups} setGroups={setGroups} customers={customers}/>}
         {tab==="udhar"&&<UdharTab udhar={udhar} setUdhar={setUdhar}/>}
