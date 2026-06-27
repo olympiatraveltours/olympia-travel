@@ -11,11 +11,19 @@ const AGENCY = {
   glNo: "GL No. 6033",
   phone1: "+92-331-2351419",
   phone2: "+92-339-4236777",
-  email1: "travelqueriespk@gmail.com",
+  phone3: "+92-323-2255773",
+  phone4: "+92-318-3211991",
+  phones: "+92-331-2351419 / +92-339-4236777 / +92-323-2255773 / +92-318-3211991",
+  email1: "bookings@olympiatrvl.com",
   email2: "olympiatraveltours@gmail.com",
+  email3: "travelqueriespk@gmail.com",
+  emails: "bookings@olympiatrvl.com / olympiatraveltours@gmail.com",
   address: "Office No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi",
   whatsapp: "923312351419",
+  website: "olympiatrvl.com",
   bank: { name:"Bank Alfalah", title:"M/S OLYMPIA TRAVEL AND TOURS", account:"55875002428885", iban:"PK84ALFH5587005002428885" },
+  bank2: { name:"Bank Al Habib", title:"M/S OLYMPIA TRAVEL AND TOURS", account:"10070981032324010", iban:"PK32BAHL1007098103232401" },
+  wallet: { name:"Dawood Shoukat", number:"03312351419", services:"JazzCash / EasyPaisa / SadaPay / NayaPay" },
 };
 // ─── FIREBASE CONFIG ─────────────────────────────────────────
 // Replace these values with your Firebase project config
@@ -276,9 +284,14 @@ function buildInvoiceHTML(b, isAllTime, allBookings){
       +"<div class='row'><span class='lbl'>Title</span><span class='val'>"+AGENCY.bank.title+"</span></div>"
       +"<div class='row'><span class='lbl'>A/C</span><span class='val'>"+AGENCY.bank.account+"</span></div>"
       +"<div class='row'><span class='lbl'>IBAN</span><span class='val' style='font-size:10px'>"+AGENCY.bank.iban+"</span></div>"
+      +"<div class='bt' style='margin-top:6px'>"+AGENCY.bank2.name+"</div>"
+      +"<div class='row'><span class='lbl'>Title</span><span class='val'>"+AGENCY.bank2.title+"</span></div>"
+      +"<div class='row'><span class='lbl'>A/C</span><span class='val'>"+AGENCY.bank2.account+"</span></div>"
+      +"<div class='row'><span class='lbl'>IBAN</span><span class='val' style='font-size:10px'>"+AGENCY.bank2.iban+"</span></div>"
+      +"<div class='row' style='margin-top:6px'><span class='lbl'>"+AGENCY.wallet.services+"</span><span class='val'>"+AGENCY.wallet.number+" ("+AGENCY.wallet.name+")</span></div>"
       +"</div>";
   }
-  body+="<div class='foot'>"+AGENCY.name+" "+AGENCY.glNo+"<br>"+AGENCY.address+"<br>"+AGENCY.phone1+" / "+AGENCY.phone2+" | "+AGENCY.email2+"</div>";
+  body+="<div class='foot'>"+AGENCY.name+" "+AGENCY.glNo+"<br>"+AGENCY.address+"<br>"+AGENCY.phones+" | "+AGENCY.emails+" | "+AGENCY.website+"</div>";
   return "<!DOCTYPE html><html><head><title>Invoice</title><style>"+css+"</style></head><body><div class='box'>"+body+"</div></body></html>";
 }
 
@@ -306,6 +319,11 @@ function InvoiceModal(props){
           <div style={{color:C.accent,fontWeight:800,marginBottom:3}}>{AGENCY.bank.name}</div>
           <div>A/C: {AGENCY.bank.account}</div>
           <div style={{fontSize:10,color:C.muted}}>IBAN: {AGENCY.bank.iban}</div>
+          <div style={{color:C.accent,fontWeight:800,margin:"6px 0 3px"}}>{AGENCY.bank2.name}</div>
+          <div>A/C: {AGENCY.bank2.account}</div>
+          <div style={{fontSize:10,color:C.muted}}>IBAN: {AGENCY.bank2.iban}</div>
+          <div style={{marginTop:6,paddingTop:6,borderTop:"1px dashed "+C.border}}>{AGENCY.wallet.services}</div>
+          <div style={{fontWeight:700}}>{AGENCY.wallet.number} ({AGENCY.wallet.name})</div>
         </div>
       </div>
       <div style={{display:"flex",gap:8,marginTop:12}}>
@@ -342,7 +360,7 @@ function CustomerHistoryModal(props){
         +"</tr>";
     }).join("");
     var html="<!DOCTYPE html><html><head><title>History: "+c.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:15px}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:16px;font-weight:900;color:#16a34a;margin-bottom:8px}.cards{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.card{flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:7px 10px;text-align:center}.cl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase}.cv{font-size:14px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:6px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:5px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:10px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-    +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" | "+AGENCY.email2+"<br>"+AGENCY.address+"</div></div>"
+    +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phones+" | "+AGENCY.emails+"<br>"+AGENCY.address+"</div></div>"
     +"<div class='title'>Office History — "+c.name+"</div>"
     +"<div class='cards'><div class='card'><div class='cl'>Total Bookings</div><div class='cv'>"+all.length+"</div></div><div class='card'><div class='cl'>Total Sale</div><div class='cv'>"+pkr(totalSale)+"</div></div><div class='card'><div class='cl'>Total Paid</div><div class='cv'>"+pkr(totalPaid)+"</div></div><div class='card'><div class='cl'>Balance</div><div class='cv' style='color:#dc2626'>"+pkr(totalBalance)+"</div></div><div class='card'><div class='cl'>Total Profit</div><div class='cv' style='color:#b45309'>"+pkr(totalProfit)+"</div></div></div>"
     +"<table><tr><th>Date</th><th>Destination</th><th>Package</th><th>Sale</th><th>Cost</th><th>Received</th><th>Balance</th><th>Profit</th><th>Status</th></tr>"+rows+"</table>"
@@ -365,13 +383,13 @@ function CustomerHistoryModal(props){
         +"</tr>";
     }).join("");
     var html="<!DOCTYPE html><html><head><title>Statement: "+c.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:15px}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:55px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:12px}.cards{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.card{flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:8px 12px;text-align:center}.cl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:2px}.cv{font-size:15px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.bal{background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-top:12px;text-align:center}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px;line-height:1.8}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-    +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" | "+AGENCY.email2+"<br>"+AGENCY.address+"</div></div>"
+    +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phones+" | "+AGENCY.emails+"<br>"+AGENCY.address+"</div></div>"
     +"<div class='title'>Account Statement</div>"
     +"<div class='sub'>Client: <b>"+c.name+"</b> | Phone: "+c.phone+(c.passport?" | Passport: "+c.passport:"")+"</div>"
     +"<div class='cards'><div class='card'><div class='cl'>Total Services</div><div class='cv'>"+all.length+"</div></div><div class='card'><div class='cl'>Total Amount</div><div class='cv'>"+pkr(totalSale)+"</div></div><div class='card'><div class='cl'>Amount Paid</div><div class='cv'>"+pkr(totalPaid)+"</div></div><div class='card'><div class='cl'>Balance Due</div><div class='cv' style='color:#dc2626'>"+pkr(totalBalance)+"</div></div></div>"
     +"<table><tr><th>Date</th><th>Destination</th><th>Service</th><th>Description</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th></tr>"+rows+"</table>"
     +(totalBalance>0?"<div class='bal'>⚠️ <b>Outstanding Balance: "+pkr(totalBalance)+"</b> — Baaki rakam jama karwayein</div>":"<div class='bal' style='background:#dcfce7;border-color:#bbf7d0'>✅ <b>Sab payments clear hain!</b></div>")
-    +"<div class='foot'>"+AGENCY.name+"<br>"+AGENCY.phone1+" | "+AGENCY.email2+"<br>"+AGENCY.address+"</div></body></html>";
+    +"<div class='foot'>"+AGENCY.name+"<br>"+AGENCY.phones+" | "+AGENCY.emails+"<br>"+AGENCY.address+"</div></body></html>";
     var w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
   }
 
@@ -896,7 +914,7 @@ function Reports(props){
     var rows2=mE.map(function(e){return "<tr><td>"+e.description+"</td><td>"+e.category+"</td><td>"+e.date+"</td><td style='color:#dc2626'>"+pkr(e.amount)+"</td><td>"+(e.account||"--")+"</td></tr>";}).join("")||"<tr><td colspan='5' style='color:#9ca3af;padding:10px'>No expenses</td></tr>";
     var acctRows=Object.entries(acct).map(function(kv){return "<tr><td>"+kv[0]+"</td><td style='color:#16a34a'>"+pkr(kv[1])+"</td></tr>";}).join("")||"<tr><td colspan='2' style='color:#9ca3af;padding:10px'>None</td></tr>";
     var w=window.open("","_blank");
-    var html="<!DOCTYPE html><html><head><title>Report "+period+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:#f0fdf4;padding:20px;color:#1f2937}.wrap{max-width:760px;margin:0 auto;background:#fff;border-radius:14px;padding:30px;border:2px solid #bbf7d0}.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2px solid #bbf7d0;padding-bottom:14px;margin-bottom:18px}.logo{height:55px;width:auto}.hr{text-align:right;color:#6b7280;font-size:11px;line-height:1.8}.ht{color:#16a34a;font-size:16px;font-weight:900}.stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}.stat{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:9px;padding:10px 14px;flex:1;min-width:90px}.sl{color:#6b7280;font-size:9px;font-weight:700;text-transform:uppercase}.sv{font-size:16px;font-weight:800;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px}th{background:#f0fdf4;color:#16a34a;padding:8px 10px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase}td{padding:7px 10px;border-bottom:1px solid #d1f0dd}h3{color:#16a34a;font-size:12px;margin:14px 0 7px;padding-bottom:4px;border-bottom:1px solid #bbf7d0}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px;line-height:1.8}@media print{body{background:#fff!important;padding:8px}*{-webkit-print-color-adjust:exact!important}}</style></head><body><div class='wrap'><div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='hr'><div class='ht'>Financial Report</div><div>"+period+"</div><div>"+dstr()+"</div></div></div><div class='stats'><div class='stat'><div class='sl'>Revenue</div><div class='sv' style='color:#16a34a'>"+pkr(mRev)+"</div></div><div class='stat'><div class='sl'>Booking Profit</div><div class='sv' style='color:#b45309'>"+pkr(mProfit)+"</div></div><div class='stat'><div class='sl'>Expenses</div><div class='sv' style='color:#dc2626'>"+pkr(mExp)+"</div></div><div class='stat'><div class='sl'>Net Profit</div><div class='sv' style='color:"+(mPro>=0?"#b45309":"#dc2626")+"'>"+pkr(mPro)+"</div></div><div class='stat'><div class='sl'>Pending</div><div class='sv' style='color:#d97706'>"+pkr(pend)+"</div></div></div><h3>Account-wise Income</h3><table><tr><th>Account</th><th>Amount</th></tr>"+acctRows+"</table><h3>Bookings ("+mB.length+")</h3><table><tr><th>Customer</th><th>Dest.</th><th>Date</th><th>Sale</th><th>Cost</th><th>Comm.</th><th>Profit</th><th>Status</th><th>Account</th></tr>"+rows1+"</table><h3>Expenses ("+mE.length+")</h3><table><tr><th>Description</th><th>Category</th><th>Date</th><th>Amount</th><th>Account</th></tr>"+rows2+"</table><div class='foot'>"+AGENCY.name+" "+AGENCY.glNo+"<br>"+AGENCY.address+"<br>"+AGENCY.phone1+" / "+AGENCY.phone2+" | "+AGENCY.email2+"</div></div></body></html>";
+    var html="<!DOCTYPE html><html><head><title>Report "+period+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:#f0fdf4;padding:20px;color:#1f2937}.wrap{max-width:760px;margin:0 auto;background:#fff;border-radius:14px;padding:30px;border:2px solid #bbf7d0}.hdr{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2px solid #bbf7d0;padding-bottom:14px;margin-bottom:18px}.logo{height:55px;width:auto}.hr{text-align:right;color:#6b7280;font-size:11px;line-height:1.8}.ht{color:#16a34a;font-size:16px;font-weight:900}.stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}.stat{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:9px;padding:10px 14px;flex:1;min-width:90px}.sl{color:#6b7280;font-size:9px;font-weight:700;text-transform:uppercase}.sv{font-size:16px;font-weight:800;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px}th{background:#f0fdf4;color:#16a34a;padding:8px 10px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase}td{padding:7px 10px;border-bottom:1px solid #d1f0dd}h3{color:#16a34a;font-size:12px;margin:14px 0 7px;padding-bottom:4px;border-bottom:1px solid #bbf7d0}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px;line-height:1.8}@media print{body{background:#fff!important;padding:8px}*{-webkit-print-color-adjust:exact!important}}</style></head><body><div class='wrap'><div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='hr'><div class='ht'>Financial Report</div><div>"+period+"</div><div>"+dstr()+"</div></div></div><div class='stats'><div class='stat'><div class='sl'>Revenue</div><div class='sv' style='color:#16a34a'>"+pkr(mRev)+"</div></div><div class='stat'><div class='sl'>Booking Profit</div><div class='sv' style='color:#b45309'>"+pkr(mProfit)+"</div></div><div class='stat'><div class='sl'>Expenses</div><div class='sv' style='color:#dc2626'>"+pkr(mExp)+"</div></div><div class='stat'><div class='sl'>Net Profit</div><div class='sv' style='color:"+(mPro>=0?"#b45309":"#dc2626")+"'>"+pkr(mPro)+"</div></div><div class='stat'><div class='sl'>Pending</div><div class='sv' style='color:#d97706'>"+pkr(pend)+"</div></div></div><h3>Account-wise Income</h3><table><tr><th>Account</th><th>Amount</th></tr>"+acctRows+"</table><h3>Bookings ("+mB.length+")</h3><table><tr><th>Customer</th><th>Dest.</th><th>Date</th><th>Sale</th><th>Cost</th><th>Comm.</th><th>Profit</th><th>Status</th><th>Account</th></tr>"+rows1+"</table><h3>Expenses ("+mE.length+")</h3><table><tr><th>Description</th><th>Category</th><th>Date</th><th>Amount</th><th>Account</th></tr>"+rows2+"</table><div class='foot'>"+AGENCY.name+" "+AGENCY.glNo+"<br>"+AGENCY.address+"<br>"+AGENCY.phones+" | "+AGENCY.emails+"</div></div></body></html>";
     w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
   };
 
@@ -976,7 +994,7 @@ function Marketing(props){
   var packages=props.packages,setPackages=props.setPackages,customers=props.customers,showToast=props.showToast;
   var ep={name:"",destination:"",duration:"",price:"",includes:"",highlight:""};
   var [pf,setPf]=useState(ep);var [showP,setShowP]=useState(false);var [editId,setEditId]=useState(null);
-  var [msg,setMsg]=useState("Olympia Travel & Tours\n\nAssalam o Alaikum!\n\nHamari khaas offers:\n\n[PACKAGES]\n\nBooking:\n+92-331-2351419 / +92-339-4236777\nolympiatraveltours@gmail.com\nOffice No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi");
+  var [msg,setMsg]=useState("Olympia Travel & Tours\n\nAssalam o Alaikum!\n\nHamari khaas offers:\n\n[PACKAGES]\n\nBooking:\n+92-331-2351419 / +92-339-4236777 / +92-323-2255773 / +92-318-3211991\nbookings@olympiatrvl.com / olympiatraveltours@gmail.com\nolympiatrvl.com\nOffice No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi");
   var [ptitle,setPtitle]=useState("Special Offers This Season!");
   var [sel,setSel]=useState([]);var [copied,setCopied]=useState(false);
   var forMsg=sel.length>0?packages.filter(function(p){return sel.includes(p.id);}):packages;
@@ -990,7 +1008,7 @@ function Marketing(props){
   function printPoster(){
     var ph=forMsg.map(function(p){return "<div class='pkg'><div class='badge'>"+p.highlight+"</div><div class='pn'>"+p.name+"</div><div class='pd'>"+p.destination+"</div><div class='pdu'>"+p.duration+"</div><div class='pi'>"+p.includes+"</div><div class='pp'>"+pkr(p.price)+"</div></div>";}).join("");
     var w=window.open("","_blank");
-    var html="<!DOCTYPE html><html><head><title>Poster</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#14532d,#16a34a);min-height:100vh;padding:22px}.wrap{max-width:720px;margin:0 auto;background:rgba(255,255,255,.07);border-radius:18px;padding:28px;border:2px solid rgba(255,255,255,.2)}.top{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid rgba(255,255,255,.2)}.logo{height:70px;width:auto}.pt{color:#fde68a;font-size:20px;font-weight:900;margin:12px 0 20px;text-align:center}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}.pkg{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);border-radius:12px;padding:16px;text-align:center;color:#fff}.badge{background:#fde68a;color:#14532d;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800;display:inline-block;margin-bottom:7px}.pn{font-size:14px;font-weight:900;margin-bottom:3px}.pd,.pdu{font-size:11px;opacity:.8;margin-bottom:2px}.pi{font-size:10px;opacity:.65;margin-bottom:7px}.pp{font-size:19px;font-weight:900;color:#fde68a}.foot{text-align:center;border-top:2px solid rgba(255,255,255,.2);padding-top:14px}.fn{font-size:15px;font-weight:900;color:#fff;margin-bottom:5px}.fi{font-size:11px;line-height:1.9;color:rgba(255,255,255,.85)}@media print{body{background:linear-gradient(135deg,#14532d,#16a34a)!important;-webkit-print-color-adjust:exact!important}}</style></head><body><div class='wrap'><div class='top'><img src='"+LOGO_URI+"' class='logo'/></div><div class='pt'>"+ptitle+"</div><div class='grid'>"+ph+"</div><div class='foot'><div class='fn'>"+AGENCY.name+"</div><div class='fi'>"+AGENCY.phone1+" / "+AGENCY.phone2+"<br>"+AGENCY.email2+"<br>"+AGENCY.address+"</div></div></div></body></html>";
+    var html="<!DOCTYPE html><html><head><title>Poster</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#14532d,#16a34a);min-height:100vh;padding:22px}.wrap{max-width:720px;margin:0 auto;background:rgba(255,255,255,.07);border-radius:18px;padding:28px;border:2px solid rgba(255,255,255,.2)}.top{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid rgba(255,255,255,.2)}.logo{height:70px;width:auto}.pt{color:#fde68a;font-size:20px;font-weight:900;margin:12px 0 20px;text-align:center}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}.pkg{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);border-radius:12px;padding:16px;text-align:center;color:#fff}.badge{background:#fde68a;color:#14532d;border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800;display:inline-block;margin-bottom:7px}.pn{font-size:14px;font-weight:900;margin-bottom:3px}.pd,.pdu{font-size:11px;opacity:.8;margin-bottom:2px}.pi{font-size:10px;opacity:.65;margin-bottom:7px}.pp{font-size:19px;font-weight:900;color:#fde68a}.foot{text-align:center;border-top:2px solid rgba(255,255,255,.2);padding-top:14px}.fn{font-size:15px;font-weight:900;color:#fff;margin-bottom:5px}.fi{font-size:11px;line-height:1.9;color:rgba(255,255,255,.85)}@media print{body{background:linear-gradient(135deg,#14532d,#16a34a)!important;-webkit-print-color-adjust:exact!important}}</style></head><body><div class='wrap'><div class='top'><img src='"+LOGO_URI+"' class='logo'/></div><div class='pt'>"+ptitle+"</div><div class='grid'>"+ph+"</div><div class='foot'><div class='fn'>"+AGENCY.name+"</div><div class='fi'>"+AGENCY.phones+"<br>"+AGENCY.emails+"<br>"+AGENCY.address+"</div></div></div></body></html>";
     w.document.write(html);w.document.close();setTimeout(function(){w.print();},400);
   }
   return(<div>
@@ -1442,7 +1460,7 @@ function VisaAgentTab(props){
     var tdt=docInfo.travelDate?new Date(docInfo.travelDate).toLocaleDateString("en-PK",{day:"2-digit",month:"long",year:"numeric"}):"[Travel Date]";
     var tod=new Date().toLocaleDateString("en-PK",{day:"2-digit",month:"long",year:"numeric"});
     var ref="OTT/"+new Date().getFullYear()+"/"+Math.floor(Math.random()*9000+1000);
-    var sig="\n\n___________________________\nAuthorized Signatory\nOlympia Travel & Tours\nGL No. 6033\nOffice No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi\nTel: +92-331-2351419 | +92-339-4236777\nEmail: olympiatraveltours@gmail.com\nDate: "+tod;
+    var sig="\n\n___________________________\nAuthorized Signatory\nOlympia Travel & Tours\nGL No. 6033\nOffice No. SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi\nTel: +92-331-2351419 | +92-339-4236777 | +92-323-2255773 | +92-318-3211991\nEmail: bookings@olympiatrvl.com | olympiatraveltours@gmail.com\nWebsite: olympiatrvl.com\nDate: "+tod;
     var doc="";
     if(docType==="cover"){
       doc="Ref No: "+ref+"\nDate: "+tod+"\n\nTo,\nThe Visa Officer\n"+dest+" Embassy / Consulate\nIslamabad, Pakistan\n\nSubject: Cover Letter for Tourist Visa Application - "+n+"\n\nRespected Sir/Madam,\n\nIt is respectfully submitted that Mr./Ms. "+n+", holder of Pakistani Passport No. "+pp+", intends to visit "+dest+" for "+purp+" purposes.\n\nThe applicant is a valued client of Olympia Travel & Tours, a licensed travel agency (GL No. 6033) based in Karachi, Pakistan. We are pleased to confirm that we have made the following travel arrangements:\n\n- Destination: "+dest+"\n- Purpose of Visit: "+purp+"\n- Duration of Stay: "+dur+"\n- Intended Travel Date: "+tdt+"\n\nThe applicant has strong ties to Pakistan and will return upon completion of the visit. All necessary financial arrangements have been made.\n\nWe kindly request the concerned authorities to grant a tourist visa to our client. We assure you that the applicant will abide by all visa conditions and will not overstay.\n\nYours faithfully,"+sig;
@@ -1488,7 +1506,7 @@ function VisaAgentTab(props){
     var w=window.open("","_blank");
     w.document.write("<!DOCTYPE html><html><head><title>"+c.name+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;padding:0}.hdr{background:linear-gradient(135deg,#16a34a,#059669);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between}.a1{font-size:16px;font-weight:900}.a2{font-size:9px;opacity:.85;margin-top:1px}.a3{font-size:10px;opacity:.85;margin-top:4px;line-height:1.6}.badge{background:rgba(255,255,255,.2);border-radius:9px;padding:8px 14px;text-align:center}.body{padding:18px 24px}.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}.card{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:10px;text-align:center}.cl{font-size:8px;font-weight:700;color:#16a34a;text-transform:uppercase;margin-bottom:2px}.cv{font-size:11px;font-weight:800}.st{font-size:10px;font-weight:800;color:#16a34a;text-transform:uppercase;margin-bottom:7px;padding-bottom:4px;border-bottom:2px solid #bbf7d0}ul{padding-left:14px;font-size:11px;line-height:1.8;color:#374151;margin-bottom:12px}.nt{background:#fefce8;border:1.5px solid #fde68a;border-radius:7px;padding:9px;font-size:10px;color:#92400e;margin-bottom:12px}.pay{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:9px;font-size:10px;line-height:1.9}.ft{text-align:center;color:#9ca3af;font-size:9px;margin-top:10px;padding-top:7px;border-top:1px dashed #e5e7eb}.wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:65px;font-weight:900;color:rgba(22,163,74,.04);pointer-events:none;white-space:nowrap}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
     +"<div class='wm'>OLYMPIA TRAVEL</div>"
-    +"<div class='hdr'><div><div class='a1'>Olympia Travel & Tours</div><div class='a2'>GL No. 6033 | Visa & Travel Consultants</div><div class='a3'>📍 SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi<br>📞 +92-331-2351419 | +92-339-4236777</div></div>"
+    +"<div class='hdr'><div><div class='a1'>Olympia Travel & Tours</div><div class='a2'>GL No. 6033 | Visa & Travel Consultants</div><div class='a3'>📍 SF-18, 2nd Floor, Lavish Mall, Tariq Road, Karachi<br>📞 +92-331-2351419 | +92-339-4236777 | +92-323-2255773 | +92-318-3211991</div></div>"
     +"<div class='badge'><div style='font-size:28px'>"+c.flag+"</div><div style='font-weight:800;font-size:13px'>"+c.name+"</div></div></div>"
     +"<div class='body'>"
     +"<div class='grid'>"
@@ -1499,7 +1517,7 @@ function VisaAgentTab(props){
     +"<div class='st'>📋 Required Documents</div><ul>"+reqHtml+"</ul>"
     +"<div class='st'>ℹ️ Important Notes</div><div class='nt'>"+c.notes+"</div>"
     +"<div class='st'>💳 Payment Details</div>"
-    +"<div class='pay'>JazzCash / EasyPaisa / SadaPay / NayaPay: <b>03312351419</b> (Dawood Shoukat)<br>Bank Alfalah A/C: <b>55875002428885</b> | IBAN: <b>PK84ALFH5587005002428885</b><br>Account Title: <b>M/S Olympia Travel And Tours</b></div>"
+    +"<div class='pay'>JazzCash / EasyPaisa / SadaPay / NayaPay: <b>03312351419</b> (Dawood Shoukat)<br>Bank Alfalah A/C: <b>55875002428885</b> | IBAN: <b>PK84ALFH5587005002428885</b><br>Bank Al Habib A/C: <b>10070981032324010</b> | IBAN: <b>PK32BAHL1007098103232401</b><br>Account Title: <b>M/S Olympia Travel And Tours</b></div>"
     +"</div><div class='ft'>Reference only. Requirements may change. Printed: "+new Date().toLocaleDateString("en-PK")+"</div>"
     +"</body></html>");
     w.document.close();setTimeout(function(){w.print();},400);
@@ -2495,7 +2513,7 @@ function UdharTab(props){
       +"<div class='net' style='background:"+(net>0?"#fee2e2":net<0?"#dcfce7":"#f3f4f6")+";border:1.5px solid "+(net>0?"#fecaca":net<0?"#bbf7d0":"#e5e7eb")+"'>"
       +"<div style='font-size:11px;color:#6b7280;margin-bottom:4px'>"+(net>0?"In se lena hai":net<0?"In ko dena hai":"Hisaab clear hai")+"</div>"
       +"<div style='font-size:24px;font-weight:900;color:"+(net>0?"#dc2626":net<0?"#16a34a":"#6b7280")+"'>"+pkr(Math.abs(net))+"</div></div>"
-      +"<div class='pay'>💳 <b>Payment Details:</b><br>JazzCash / EasyPaisa / SadaPay / NayaPay: <b>03312351419</b> (Dawood Shoukat)<br>Bank Alfalah — A/C: 55875002428885 | IBAN: PK84ALFH5587005002428885 (M/S Olympia Travel & Tours)</div>"
+      +"<div class='pay'>💳 <b>Payment Details:</b><br>JazzCash / EasyPaisa / SadaPay / NayaPay: <b>03312351419</b> (Dawood Shoukat)<br>Bank Alfalah — A/C: 55875002428885 | IBAN: PK84ALFH5587005002428885<br>Bank Al Habib — A/C: 10070981032324010 | IBAN: PK32BAHL1007098103232401<br>(M/S Olympia Travel & Tours)</div>"
       +"<div class='foot'>Olympia Travel & Tours | Printed: "+new Date().toLocaleString("en-PK")+"</div>"
       +"</body></html>");
     w.document.close();
@@ -3803,7 +3821,7 @@ export default function App(){
           <img src={LOGO_URI} alt="Olympia" style={{height:56,width:"auto",background:"#ffffff",borderRadius:12,padding:"5px 10px",boxShadow:"0 2px 8px rgba(0,0,0,0.18)"}}/>
           <div>
             <div style={{color:"rgba(255,255,255,.9)",fontSize:12,fontWeight:800}}>Olympia Travel & Tours</div>
-            <div style={{color:"rgba(255,255,255,.7)",fontSize:10}}>{AGENCY.phone1} - {AGENCY.phone2}</div>
+            <div style={{color:"rgba(255,255,255,.7)",fontSize:10}}>{AGENCY.phones}</div>
           </div>
         </div>
         <div style={{color:"rgba(255,255,255,.75)",fontSize:11,textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
@@ -3980,6 +3998,10 @@ export default function App(){
                   <div style={{color:"#16a34a",fontWeight:800,marginBottom:2}}>{AGENCY.bank.name}</div>
                   <div style={{marginBottom:1}}>A/C: {AGENCY.bank.account}</div>
                   <div style={{fontSize:9,color:"#6b7280",wordBreak:"break-all"}}>IBAN: {AGENCY.bank.iban}</div>
+                  <div style={{color:"#16a34a",fontWeight:800,margin:"6px 0 2px"}}>{AGENCY.bank2.name}</div>
+                  <div style={{marginBottom:1}}>A/C: {AGENCY.bank2.account}</div>
+                  <div style={{fontSize:9,color:"#6b7280",wordBreak:"break-all"}}>IBAN: {AGENCY.bank2.iban}</div>
+                  <div style={{fontSize:9,color:"#6b7280",marginTop:4}}>{AGENCY.wallet.services}: {AGENCY.wallet.number} ({AGENCY.wallet.name})</div>
                 </div>
                 {Object.entries(expByCat).slice(0,5).map(function(kv){return(
                   <div key={kv[0]} style={{marginBottom:7}}>
@@ -4081,7 +4103,7 @@ export default function App(){
                   var totalSale=fBFiltered.reduce(function(s,b){return s+Number(b.amount);},0);
                   var totalProfit=fBFiltered.reduce(function(s,b){return s+Number(b.amount)-Number(b.cost||0)-Number(b.commission||0);},0);
                   var html="<!DOCTYPE html><html><head><title>Bookings "+period+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:15px;color:#1f2937}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:10px}.stats{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}.stat{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;flex:1}.sl{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase}.sv{font-size:15px;font-weight:900;color:#16a34a}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" / "+AGENCY.phone2+"<br>"+AGENCY.email2+"<br>"+AGENCY.address+"</div></div>"
+                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phones+"<br>"+AGENCY.emails+"<br>"+AGENCY.address+"</div></div>"
                   +"<div class='title'>Bookings Report — "+period+"</div>"
                   +"<div class='stats'><div class='stat'><div class='sl'>Total Bookings</div><div class='sv'>"+fBFiltered.length+"</div></div><div class='stat'><div class='sl'>Total Sale</div><div class='sv'>"+pkr(totalSale)+"</div></div><div class='stat'><div class='sl'>Total Profit</div><div class='sv'>"+pkr(totalProfit)+"</div></div><div class='stat'><div class='sl'>Paid</div><div class='sv'>"+fBFiltered.filter(function(b){return b.status==="Paid";}).length+"</div></div><div class='stat'><div class='sl'>Pending</div><div class='sv'>"+fBFiltered.filter(function(b){return b.status==="Pending";}).length+"</div></div></div>"
                   +"<table><tr><th>ID</th><th>Customer</th><th>Destination</th><th>Package</th><th>Date</th><th>Sale</th><th>Cost</th><th>Comm.</th><th>Profit</th><th>Account</th><th>Status</th><th>Notes</th></tr>"+rows+"</table>"
@@ -4218,7 +4240,7 @@ export default function App(){
                     return "<tr style='background:"+(i%2===0?"#fff":"#f0fdf4")+"'><td>"+c.id+"</td><td style='font-weight:700'>"+c.name+"</td><td>"+c.phone+"</td><td>"+(c.email||"--")+"</td><td>"+(c.city||"--")+"</td><td style='font-family:monospace'>"+(c.passport||"--")+"</td><td>"+(c.reference||"--")+"</td><td>"+(c.notes||"--")+"</td></tr>";
                   }).join("");
                   var html="<!DOCTYPE html><html><head><title>Customers</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:15px;color:#1f2937}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:10px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+" / "+AGENCY.phone2+"<br>"+AGENCY.email2+"</div></div>"
+                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phones+"<br>"+AGENCY.emails+"</div></div>"
                   +"<div class='title'>Customer List ("+fC.length+")</div>"
                   +"<table><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>City</th><th>Passport</th><th>Reference</th><th>Notes</th></tr>"+rows+"</table>"
                   +"<div class='foot'>"+AGENCY.name+" | Printed: "+new Date().toLocaleDateString("en-PK")+"</div></body></html>";
@@ -4304,7 +4326,7 @@ export default function App(){
                   var period=eMode==="all"?"All Time":eMode==="year"?String(eYr):MONTHS[eMo]+" "+eYr;
                   var total=fEFiltered.reduce(function(s,e){return s+Number(e.amount);},0);
                   var html="<!DOCTYPE html><html><head><title>Expenses "+period+"</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:15px;color:#1f2937}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #bbf7d0;padding-bottom:12px;margin-bottom:12px}.logo{height:50px}.info{text-align:right;font-size:11px;color:#6b7280;line-height:1.8}.title{font-size:18px;font-weight:900;color:#16a34a;margin-bottom:6px}.sub{color:#6b7280;font-size:12px;margin-bottom:10px}.total{background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:8px 14px;margin-bottom:12px;display:inline-block;font-size:14px;font-weight:900;color:#dc2626}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f0fdf4;color:#16a34a;padding:7px 8px;text-align:left;font-size:9px;font-weight:800;text-transform:uppercase;border-bottom:2px solid #bbf7d0}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.foot{text-align:center;color:#9ca3af;font-size:9px;margin-top:12px;border-top:1px dashed #bbf7d0;padding-top:8px}@media print{*{-webkit-print-color-adjust:exact!important}}</style></head><body>"
-                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+"<br>"+AGENCY.email2+"</div></div>"
+                  +"<div class='hdr'><img src='"+LOGO_URI+"' class='logo'/><div class='info'>"+AGENCY.name+"<br>"+AGENCY.phone1+"<br>"+AGENCY.emails+"</div></div>"
                   +"<div class='title'>Expenses — "+period+"</div>"
                   +"<div class='sub'>Total Entries: "+fEFiltered.length+"</div>"
                   +"<div class='total'>Total: "+pkr(total)+"</div>"
